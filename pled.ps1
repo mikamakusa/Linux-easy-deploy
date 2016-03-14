@@ -18,8 +18,10 @@ function PacMan {
 }
 #######       Code       ########
 $file = Read-Host "Fichier d'inventaire"
-foreach ($host in ((Import-Csv $file -Delimiter ";" | select -Property IP).IP)) {
-    New-SSHSession -ComputerName '"'+$host+'"'
-    $package = PacMan
-    Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command $package ((Import-Csv $file -Delimiter ";" | select -Property Packages).Packages)
+foreach ($i in ((Import-Csv $file -Delimiter ";" | select -Property IP).IP)) {
+    New-SSHSession -ComputerName $i -Port ((Import-Csv $file -Delimiter ";").Port)
+    $pacman = PacMan
+    foreach ($p in ((Import-Csv .\Classeur1.csv -Delimiter ";").Packages)) {
+        (Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$pacman install -y $p").Output
+    }
 }
