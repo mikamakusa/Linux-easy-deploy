@@ -1,5 +1,12 @@
 ############ Powershell Linux Easy Deploy ############
 $version = "1.0"
+####### Example Inventory file ########
+## IP;Port;Packages;
+## 192.168.99.100;32768;vim;
+## ;;curl;
+## ;;wget;
+## ;;java;
+### It will install vim, curl, wget and java on the host 192.168.99.100 (ssh port 32768)
 ####### Import SSH module #######
 if (Get-Command | Where {$_.Name -notmatch "New-SShSession"}){
 iex (New-Object Net.WebClient).DownloadString("https://gist.github.com/darkoperator/6152630/raw/c67de4f7cd780ba367cccbc2593f38d18ce6df89/instposhsshdev")} 
