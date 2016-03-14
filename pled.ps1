@@ -6,17 +6,41 @@ iex (New-Object Net.WebClient).DownloadString("https://gist.github.com/darkopera
 Import-Module Posh-SSH 
 #################################
 ####### Custom Functions ########
+######  Package Manager - Action Install & Remove ###### 
 function PacMan {
-    $hversion = (Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "ls /etc").Output
-    if ($hversion -match "os-release") {
-        if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "cat /etc/os-release").Output) -match "ID=ubuntu") {"apt-get"}
-        Elseif (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "cat /etc/os-release").Output) -match "centos") {"yum"}
-        Elseif (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "cat /etc/os-release").Output) -match "suse") {"zipper"}
-        Elseif(((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "cat /etc/os-release").Output) -match "gentoo") {"emerge"}
-        #(Invoke-SSHCommand -SessionId $sid -Command "cat /etc/os-release").Output -match "slackware" {""}      
-        else {"Version de linux inconnue"}
+    Param (
+        [Parameter(Mandatory=$true)][ValidateSet("Install","Remove")][string]$Action
+    )
+    $packman = "apt-get","zypper","yum","urpmi","slackpkg","slapt-get","netpkg","equo","pacman -S","conary","apk add","emerge","lin","cast","niv-env -i","xpbs-install","snappy"
+    if ($Action -match "Install") {
+        foreach ($p in $packman) {
+            if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$p").ExitStatus -notmatch "127")) {
+                if ($p -match "apt-get"-or "zypper" -or "yum" -or "slackpkg" -or "equo" -or "snappy") {
+                return $p+" install -y"
+            }
+            elseif ($p -match "slapt-get") {
+                return $p+" --install -y"
+            }
+            else {return $p} 
+            }
+        }
     }
-    elseif ($hversion -match "arch-release") {"pacman -Syu"}
+    else {
+        foreach ($p in $packman) {
+            if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$p").ExitStatus -notmatch "127")) {
+                if ($p -match "apt-get"-or "zypper" -or "slackpkg" -or "slap-get" -or "equo" -or "snappy" -or "netpkg") {
+                    return $p+" remove -y"
+                }
+                elseif ($p -match "yum") {
+                    return $p+" erase -y"
+                }
+                elseif ($p -match "slapt-get") {
+                    return $p+" --remove -y"
+                }
+                else {return $p} 
+            }
+        }
+    }
 }
 #######       Code       ########
 Write-Host "Powershell Linux Easy Deploy $version"
@@ -33,9 +57,9 @@ do {
             $file = Read-Host "Fichier d'inventaire"
             foreach ($i in ((Import-Csv $file -Delimiter ";" | select -Property IP).IP)) {
                 New-SSHSession -ComputerName $i -Port ((Import-Csv $file -Delimiter ";").Port)
-                $pacman = PacMan
+                $pacman = PacMan -Action Install
                 foreach ($p in ((Import-Csv .\Classeur1.csv -Delimiter ";").Packages)) {
-                    (Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$pacman install -y $p").Output
+                    (Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$pacman $p").Output
                 }
             }
         }
@@ -50,7 +74,7 @@ do {
             Write-Host "Liste des sessions SSH ouvertes"
             Get-SSHSession
             $id = Read-Host "Entrez l'id de la session"
-            $pacman = PacMan
+            $pacman = PacMan -Action Install
             $package = Read-Host "Quel package à installer ?"
             Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$pacman install -y $p").Output
         }
@@ -58,7 +82,8 @@ do {
             foreach ($i in (Get-SSHSession).Index) {
                 Remove-SSHSession -SessionId $i
             }
-            exit}
+            exit
+        }
     }
 }
 while ($menu -notmatch "3")
