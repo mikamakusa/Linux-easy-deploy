@@ -1,12 +1,12 @@
-############ Powershell Linux Easy Deploy ############
+############ Powershell Linux Easy Deploy ###############
 $version = "1.0"
-####### Import SSH module #######
+################### Import SSH module ###################
 if (Get-Command | Where {$_.Name -notmatch "New-SShSession"}){
 iex (New-Object Net.WebClient).DownloadString("https://gist.github.com/darkoperator/6152630/raw/c67de4f7cd780ba367cccbc2593f38d18ce6df89/instposhsshdev")} 
 Import-Module Posh-SSH 
-#################################
-####### Custom Functions ########
-####### Example Inventory file #########
+#########################################################
+################### Custom Functions ####################
+############### Example Inventory file ##################
 ## IP;Port;Packages;
 ## 192.168.99.100;32768;vim;
 ## ;;curl;
@@ -15,16 +15,14 @@ Import-Module Posh-SSH
 ### It will install vim, curl, wget and java on the host 192.168.99.100 (ssh port 32768)
 ####### Action available in inventory file
 ## Install | Remove | Search | UpSystem (a.k.a : Update System) | UpPackage (a.k.a : Update package list)
-########################################
+#########################################################
 function PacMan {
     $packman = "apt-get","zypper","yum","urpmi","slackpkg","slapt-get","netpkg","equo","pacman -S","conary","apk add","emerge","lin","cast","niv-env -i","xpbs-install","snappy"
     if ($Action -match "Install") {
         foreach ($p in $packman) {
             if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$p").ExitStatus -notmatch "127")) {
-                if ($p -match "apt-get"-or "zypper" -or "yum" -or "slackpkg" -or "equo" -or "snappy") {
-                    return $p+" install -y"}           
-                elseif ($p -match "slapt-get") {
-                    return $p+" --install -y"}
+                if ($p -match "apt-get"-or "zypper" -or "yum" -or "slackpkg" -or "equo" -or "snappy") {return $p+" install -y"}           
+                elseif ($p -match "slapt-get") {return $p+" --install -y"}
                 else {return $p} 
             }
         }
@@ -32,15 +30,9 @@ function PacMan {
     elseif ($Action -match "Remove") {
         foreach ($p in $packman) {
             if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$p").ExitStatus -notmatch "127")) {
-                if ($p -match "apt-get"-or "zypper" -or "slackpkg" -or "slap-get" -or "equo" -or "snappy" -or "netpkg") {
-                    return $p+" remove -y"
-                }
-                elseif ($p -match "yum") {
-                    return $p+" erase -y"
-                }
-                elseif ($p -match "slapt-get") {
-                    return $p+" --remove -y"
-                }
+                if ($p -match "apt-get"-or "zypper" -or "slackpkg" -or "slap-get" -or "equo" -or "snappy" -or "netpkg") {return $p+" remove -y"}
+                elseif ($p -match "yum") {return $p+" erase -y"}
+                elseif ($p -match "slapt-get") {return $p+" --remove -y"}
                 else {return $p} 
             }
         }
@@ -48,45 +40,20 @@ function PacMan {
     elseif ($Action -match "Search") {
         foreach ($p in $pacman) {
             if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$p").ExitStatus -notmatch "127")) {
-                if ($p -match "apt-get") {
-                    return "apt-cache"
-                }
-                elseif ($p -match "zypper") {
-                    return $p+" search -t pattern"
-                }
-                elseif ($p -match "yum" -or "equo" -or "slackpkg" -or "apk" -or "snappy") {
-                    return $p+"search"
-                }
-                elseif ($p -match "urpmi") {
-                    return "urpmq -fuzzy"
-                }
-                elseif ($p -match "netpkg") {
-                    return $p+"list | grep"
-                }
-                elseif ($p -match "conary") {
-                    return $p+" query"
-                }
-                elseif ($p -match "Pacman") {
-                    return $p+"s"
-                }
-                elseif ($p -match "emerge") {
-                    return $p+" --search"
-                }
-                elseif ($p -match "lin") {
-                    return "lvu search"
-                }
-                elseif ($p -match "cast") {
-                    return "gaze search"
-                }
-                elseif ($p -match "nix-env") {
-                    return "nix-env -qa"
-                }
-                else {
-                    return "xbps-query -Rs"
-                }
+                if ($p -match "apt-get") {return "apt-cache"}
+                elseif ($p -match "zypper") {return $p+" search -t pattern"}
+                elseif ($p -match "yum" -or "equo" -or "slackpkg" -or "apk" -or "snappy") {return $p+"search"}
+                elseif ($p -match "urpmi") {return "urpmq -fuzzy"}
+                elseif ($p -match "netpkg") {return $p+"list | grep"}
+                elseif ($p -match "conary") {return $p+" query"}
+                elseif ($p -match "Pacman") {return $p+"s"}
+                elseif ($p -match "emerge") {return $p+" --search"}
+                elseif ($p -match "lin") {return "lvu search"}
+                elseif ($p -match "cast") {return "gaze search"}
+                elseif ($p -match "nix-env") {return "nix-env -qa"}
+                else {return "xbps-query -Rs"}
             }
         }
-        
     }
     elseif ($Action -match "UpSystem") {
         foreach ($p in $packman) {
@@ -123,9 +90,9 @@ function PacMan {
             }
         }
     }
-    else {}
+    else {return "Erreur - Commande inconnue ou non reférencée"}
 }
-#######       Code       ########
+################### Code ########################
 Write-Host "Powershell Linux Easy Deploy $version"
 do {
     [int]$menu0 = 0
