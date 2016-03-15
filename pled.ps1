@@ -12,85 +12,84 @@ Import-Module Posh-SSH
 ## ;;curl;Remove
 ## ;;wget;Search
 ## ;;java;Install
+## 192.168.99.110;32769;;UpSystem
 ### It will install vim and Java, Remove curl, Search wget on the host 192.168.99.100 (ssh port 32768)
+### And make an upgrade system for 192.168.99.110
 ####### Action available in inventory file
 ## Install | Remove | Search | UpSystem (a.k.a : Update System) | UpPackage (a.k.a : Update package list)
 #########################################################
 function PacMan {
     $packman = "apt-get","zypper","yum","urpmi","slackpkg","slapt-get","netpkg","equo","pacman -S","conary","apk add","emerge","lin","cast","niv-env -i","xpbs-install","snappy"
-    if ($Action -match "Install") {
-        foreach ($p in $packman) {
-            if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$p").ExitStatus -notmatch "127")) {
-                if ($p -match "apt-get"-or "zypper" -or "yum" -or "slackpkg" -or "equo" -or "snappy") {return $p+" install -y"}           
-                elseif ($p -match "slapt-get") {return $p+" --install -y"}
-                else {return $p} 
+        foreach ($item in packman) {
+        if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$item").ExitStatus -notmatch "127")) {
+            if ($Action -match "Install") {
+                if -match "apt-get" -or "zypper" -or "yum" -or "slackpkg" -or "equo" -or "snappy") {return $item+" install -y"}
+                elseif ($item -match "slapt-get") {return $item+" --install -y"}
+                elseif ($item -match "pacman") {return $item+" -S"}
+                elseif ($item -match "conary") {return $item+" update"}
+                elseif ($item -match "apk") {return $item+" add"}
+                elseif ($item -match "nix-env") {return $item+" -i"}
+                elseif ($item -match "xpbs") {return $item+"-install"}
+                else {return $item}
             }
-        }
-    }
-    elseif ($Action -match "Remove") {
-        foreach ($p in $packman) {
-            if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$p").ExitStatus -notmatch "127")) {
-                if ($p -match "apt-get"-or "zypper" -or "slackpkg" -or "slap-get" -or "equo" -or "snappy" -or "netpkg") {return $p+" remove -y"}
-                elseif ($p -match "yum") {return $p+" erase -y"}
-                elseif ($p -match "slapt-get") {return $p+" --remove -y"}
-                else {return $p} 
+            elseif ($Action -match "Remove") {
+                if ($item -match "apt-get"-or "zypper" -or "slackpkg" -or "equo" -or "snappy" -or "netpkg") {return $item+" remove -y"}
+                elseif ($item -match "yum" -or "conary") {return $item+" erase -y"}
+                elseif ($item -match "slapt-get") {return $item+" --remove -y"}
+                elseif ($item -match "urpmi") {return "urpme"}
+                elseif ($item -match "pacman") {return $item+" -R"}
+                elseif ($item -match "apk") {return $item+" del"}
+                elseif ($item -match "emerge") {return $item+" -aC"}
+                elseif ($item -match "lin") {return "lrm"}
+                elseif ($item -match "cast") {return "dispel"}
+                elseif ($item -match "nix-env") {return $item+" -e"}
+                elseif ($item -match "xpbs") {return $item+"-remove"}
+                else {}
             }
-        }
-    }
-    elseif ($Action -match "Search") {
-        foreach ($p in $pacman) {
-            if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$p").ExitStatus -notmatch "127")) {
-                if ($p -match "apt-get") {return "apt-cache"}
-                elseif ($p -match "zypper") {return $p+" search -t pattern"}
-                elseif ($p -match "yum" -or "equo" -or "slackpkg" -or "apk" -or "snappy") {return $p+"search"}
-                elseif ($p -match "urpmi") {return "urpmq -fuzzy"}
-                elseif ($p -match "netpkg") {return $p+"list | grep"}
-                elseif ($p -match "conary") {return $p+" query"}
-                elseif ($p -match "Pacman") {return $p+"s"}
-                elseif ($p -match "emerge") {return $p+" --search"}
-                elseif ($p -match "lin") {return "lvu search"}
-                elseif ($p -match "cast") {return "gaze search"}
-                elseif ($p -match "nix-env") {return "nix-env -qa"}
+            elseif ($Action -match "Search") {
+                if ($item -match "apt-get") {return "apt-cache"}
+                elseif ($item -match "zypper") {return $item+" search -t pattern"}
+                elseif ($item -match "yum" -or "equo" -or "slackpkg" -or "apk" -or "snappy") {return $item+"search"}
+                elseif ($item -match "urpmi") {return "urpmq -fuzzy"}
+                elseif ($item -match "netpkg") {return $item+"list | grep"}
+                elseif ($item -match "conary") {return $item+" query"}
+                elseif ($item -match "Pacman") {return $item+" -S"}
+                elseif ($item -match "emerge") {return $item+" --search"}
+                elseif ($item -match "lin") {return "lvu search"}
+                elseif ($item -match "cast") {return "gaze search"}
+                elseif ($item -match "nix-env") {return "nix-env -qa"}
                 else {return "xbps-query -Rs"}
             }
-        }
-    }
-    elseif ($Action -match "UpSystem") {
-        foreach ($p in $packman) {
-            if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$p").ExitStatus -notmatch "127")) {
-                if ($p -match "zypper" -or "yum" -or "snappy") {return $p+" update -y"}
-                elseif ($p -match "apt" -or "netpkg" -or "equo" -or "apk" ) {return $p+" upgrade -y"}
-                elseif ($p -match "urpmi") {return $p+" --auto-select"}
-                elseif ($p -match "slapt-get") {return $p+" --upgrade"}
-                elseif ($p -match "slackpkg") {return $p+" upgrade-all"}
-                elseif ($p -match "pacman") {return $p+"u"}
-                elseif ($p -match "conary") {return $p+" updateall"}
-                elseif ($p -match "emerge") {return $p+" -NuDa world"}
-                elseif ($p -match "lin") {return "lunar update"}
-                elseif ($p -match "cast") {return "sorcery upgrade"}
-                elseif ($p -match "nix") {return "nix-env -u"}
+            elseif ($Action -match "UpSystem") {
+                if ($item -match "zypper" -or "yum" -or "snappy") {return $item+" update -y"}
+                elseif ($item -match "apt" -or "netpkg" -or "equo" -or "apk" ) {return $item+" upgrade -y"}
+                elseif ($item -match "urpmi") {return $item+" --auto-select"}
+                elseif ($item -match "slapt-get") {return $item+" --upgrade"}
+                elseif ($item -match "slackpkg") {return $item+" upgrade-all"}
+                elseif ($item -match "pacman") {return $item+" -Su"}
+                elseif ($item -match "conary") {return $item+" updateall"}
+                elseif ($item -match "emerge") {return $item+" -NuDa world"}
+                elseif ($item -match "lin") {return "lunar update"}
+                elseif ($item -match "cast") {return "sorcery upgrade"}
+                elseif ($item -match "nix") {return "nix-env -u"}
                 else {return "xbps-install -u"}
             }
-        }
-    }
-    elseif ($Action -match "UpPackage") {
-        foreach ($p in $packman) {
-            if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$p").ExitStatus -notmatch "127")) {
-                if ($p -match "zypper") {return $p+" refresh -y"}
-                elseif ($p -match "yum") {return $p+" check-update"}
-                elseif ($p -match "apt" -or "equo" -or "apk" -or "slackpkg") {return $p+" update -y"}
-                elseif ($p -match "urpmi") {return $p+".update -a"}
-                elseif ($p -match "slapt-get") {return $p+" --update"}
-                elseif ($p -match "pacman") {return $p+"y"}
-                elseif ($p -match "emerge") {return $p+" --sync"}
-                elseif ($p -match "lin") {return "lin moonbase"}
-                elseif ($p -match "cast") {return "scribe update"}
-                elseif ($p -match "nix") {return "nix-channel --update"}
+            elseif ($Action -match "UpPackage") {
+                if ($item -match "zypper") {return $item+" refresh -y"}
+                elseif ($item -match "yum") {return $item+" check-update"}
+                elseif ($item -match "apt" -or "equo" -or "apk" -or "slackpkg") {return $item+" update -y"}
+                elseif ($item -match "urpmi") {return $item+".update -a"}
+                elseif ($item -match "slapt-get") {return $item+" --update"}
+                elseif ($item -match "pacman") {return $item+" -Sy"}
+                elseif ($item -match "emerge") {return $item+" --sync"}
+                elseif ($item -match "lin") {return "lin moonbase"}
+                elseif ($item -match "cast") {return "scribe update"}
+                elseif ($item -match "nix") {return "nix-channel --update"}
                 else {return "xbps-install -u"}
             }
+            else {return "Erreur - Commande inconnue ou non reférencée"}
         }
     }
-    else {return "Erreur - Commande inconnue ou non reférencée"}
 }
 ################### Code ########################
 Write-Host "Powershell Linux Easy Deploy $version"
