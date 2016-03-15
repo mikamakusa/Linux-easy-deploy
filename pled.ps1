@@ -7,12 +7,12 @@ Import-Module Posh-SSH
 #########################################################
 ################### Custom Functions ####################
 ############### Example Inventory file ##################
-## IP;Port;Packages;Action
-## 192.168.99.100;32768;vim;Install
-## ;;curl;Remove
-## ;;wget;Search
-## ;;java;Install
-## 192.168.99.110;32769;;UpSystem
+## IP;Port;User;Password;Packages;Action
+## 192.168.99.100;32768;root;$pPsd34n0;vim;Install
+## ;;;;curl;Remove
+## ;;;;wget;Search
+## ;;;;java;Install
+## 192.168.99.110;32769;;;;UpSystem
 ### It will install vim and Java, Remove curl, Search wget on the host 192.168.99.100 (ssh port 32768)
 ### And make an upgrade system for 192.168.99.110
 ####### Action available in inventory file
@@ -105,7 +105,10 @@ do {
         1 {
             $file = Read-Host "Fichier d'inventaire"
             foreach ($i in ((Import-Csv $file -Delimiter ";" | select -Property IP).IP)) {
-                New-SSHSession -ComputerName $i -Port ((Import-Csv $file -Delimiter ";").Port)
+                $password = ConvertTo-SecureString ((Import-Csv $file -Delimiter ";").Password) -AsPlainText -Force
+                $username = (Import-Csv $file -Delimiter ";").Username
+                $credentials = New-Object System.Management.Automation.PSCredential($username,$password) 
+                New-SSHSession -ComputerName $i -Port ((Import-Csv $file -Delimiter ";").Port) -Credential $credentials
                 $pacman = PacMan
                 $Action = (Import-Csv $file -Delimiter ";").Action
                 foreach ($p in ((Import-Csv .\Classeur1.csv -Delimiter ";").Packages)) {
