@@ -132,7 +132,7 @@ do {
                 (Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$pacman").Output
             }
             else {
-                Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$pacman $package").Output
+                Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$pacman $package"
             }
         }
         3{
