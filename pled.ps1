@@ -23,7 +23,7 @@ function PacMan {
         foreach ($item in packman) {
         if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$item").ExitStatus -notmatch "127")) {
             if ($Action -match "Install") {
-                if -match "apt-get" -or "zypper" -or "yum" -or "slackpkg" -or "equo" -or "snappy") {return $item+" install -y"}
+                if ($item -match "apt-get" -or "zypper" -or "yum" -or "slackpkg" -or "equo" -or "snappy") {return $item+" install -y"}
                 elseif ($item -match "slapt-get") {return $item+" --install -y"}
                 elseif ($item -match "pacman") {return $item+" -S"}
                 elseif ($item -match "conary") {return $item+" update"}
