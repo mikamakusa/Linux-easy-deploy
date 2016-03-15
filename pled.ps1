@@ -7,12 +7,12 @@ Import-Module Posh-SSH
 #########################################################
 ################### Custom Functions ####################
 ############### Example Inventory file ##################
-## IP;Port;Packages;
-## 192.168.99.100;32768;vim;
-## ;;curl;
-## ;;wget;
-## ;;java;
-### It will install vim, curl, wget and java on the host 192.168.99.100 (ssh port 32768)
+## IP;Port;Packages;Action
+## 192.168.99.100;32768;vim;Install
+## ;;curl;Remove
+## ;;wget;Search
+## ;;java;Install
+### It will install vim and Java, Remove curl, Search wget on the host 192.168.99.100 (ssh port 32768)
 ####### Action available in inventory file
 ## Install | Remove | Search | UpSystem (a.k.a : Update System) | UpPackage (a.k.a : Update package list)
 #########################################################
@@ -107,7 +107,7 @@ do {
             $file = Read-Host "Fichier d'inventaire"
             foreach ($i in ((Import-Csv $file -Delimiter ";" | select -Property IP).IP)) {
                 New-SSHSession -ComputerName $i -Port ((Import-Csv $file -Delimiter ";").Port)
-                $pacman = PacMan -Action Install
+                $pacman = PacMan
                 $Action = (Import-Csv $file -Delimiter ";").Action
                 foreach ($p in ((Import-Csv .\Classeur1.csv -Delimiter ";").Packages)) {
                     (Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$pacman $p").Output
@@ -125,10 +125,16 @@ do {
             Write-Host "Liste des sessions SSH ouvertes"
             Get-SSHSession
             $id = Read-Host "Entrez l'id de la session"
-            $pacman = PacMan -Action Install
+            $pacman = PacMan
             $package = Read-Host "Quel package ?"
             $Action = "Souhaitez-vous : Install | Remove | Search | UpSystem | UpPackage "
-            Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$pacman $p").Output
+            if ($package -match " ") {
+                $Action = "UpSystem"
+                (Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$pacman").Output
+            }
+            else {
+                Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$pacman $package").Output
+            }
         }
         3{
             foreach ($i in (Get-SSHSession).Index) {
