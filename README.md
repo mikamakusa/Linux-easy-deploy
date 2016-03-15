@@ -18,7 +18,7 @@ Connect to 192.168.99.10 / Port 32769
 Check the Package Manager and do a System Upgrade  
 
 ## Action available in inventory file
-Install | Remove | Search | UpSystem (a.k.a : Update System) | UpPackage (a.k.a : Update package list)
+Install | Remove | Search | UpSystem (a.k.a : System Update) | UpPackage (a.k.a : Package List Update)
 
 ## How it works ?
 Launch the script, select "auto Deploy" or "Manual Deploy"  
