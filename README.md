@@ -3,11 +3,11 @@ Deploy packages on linux distributions with Powershell
 
 # v1.0
 ## Inventory file example (*.csv)
-IP;Port;Packages;Action
-192.168.99.100;32768;vim;Install
-;;curl;Remove
-;;wget;Search
-;;java;Install
+IP;Port;Packages;Action  
+192.168.99.100;32768;vim;Install  
+;;curl;Remove  
+;;wget;Search  
+;;java;Install  
 192.168.99.110;32769;;UpSystem
 
 ## Result
