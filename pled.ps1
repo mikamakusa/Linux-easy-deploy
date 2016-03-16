@@ -130,9 +130,5 @@ foreach ($i in ((Import-Csv $file -Delimiter ";" | select -Property IP).IP)) {
     $username = (Import-Csv $file -Delimiter ";").Username
     $credentials = New-Object System.Management.Automation.PSCredential($username,$password) 
     New-SSHSession -ComputerName $i -Port ((Import-Csv $file -Delimiter ";").Port) -Credential $credentials
-    $pacman = PacMan
-    $Action = (Import-Csv $file -Delimiter ";").Action
-    foreach ($p in ((Import-Csv .\Classeur1.csv -Delimiter ";").Packages)) {
-        (Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$pacman $p").Output
-    }
+    PacMan
 }
