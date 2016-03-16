@@ -4,12 +4,12 @@ Deploy Packages/Roles/Docker containers on linux distributions with Powershell
 # v1.2
 ## Inventory file example - Packages(*.csv)
 
-  IP;Port;User;Password;Type;Name;Action
-  192.168.99.100;32768;root;$pPsd34n0;Package;vim;Install
-  ;;;;;curl;Remove
-  ;;;;;wget;Search
-  ;;;;;java;Install
-  192.168.99.110;32769;root;$p#ez01as;Package;;UpSystem
+  IP;Port;User;Password;Type;Name;Action  
+  192.168.99.100;32768;root;$pPsd34n0;Package;vim;Install  
+  ;;;;;curl;Remove  
+  ;;;;;wget;Search  
+  ;;;;;java;Install  
+  192.168.99.110;32769;root;$p#ez01as;Package;;UpSystem  
 
 ## Result
 Connect to 192.168.99.100 / Port 32768 with username and password  
