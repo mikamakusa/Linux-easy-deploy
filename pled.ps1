@@ -92,6 +92,15 @@ function Get-ImageId {
         elseif ($Image -match "Windows 2008") {return "3d014779-fa19-49c8-8310-6c9a163ed934"}
         else {}
     }
+    Elseif if (((Import-Csv $file -Delimiter ";").Name) -match "Numergy") {
+        $Image = ((Import-Csv $file -Delimiter ";").Image)
+        if ($Image -match "Ubuntu") {return ""}
+        elseif ($Image -match "Debian") {return ""}
+        elseif ($Image -match "CentOS") {return ""}
+        elseif ($Image -match "Red Hat") {return ""}
+        elseif ($Image -match "Windows") {return ""}
+        else {}
+    }
     else {}
 }
 function Get-DORegions {
@@ -103,14 +112,34 @@ function Get-DORegions {
         elseif ($Region -match "London") {return "lon1"}
         else {}
 }
-function Get-DOSize {
-    $Size = ((Import-Csv $file -Delimiter ";").Size)
+function Get-Size {
+    if (((Import-Csv $file -Delimiter ";").Name) -match "Digital Ocean") {
+        $Size = ((Import-Csv $file -Delimiter ";").Size)
         if ($Size -match "small") {return "512mb"}
         elseif ($Size -match "medium") {return "1gb"}
         elseif ($Size -match "large") {return "2gb"}
         elseif ($Size -match "xl") {return "4gb"}
         elseif ($Size -match "xxl") {return "8gb"}
         else {}
+        }
+    Elseif (((Import-Csv $file -Delimiter ";").Name) -match "Cloudwatt") {
+        $Size = ((Import-Csv $file -Delimiter ";").Size)
+        if ($Size -match "small") {return "21"}
+        elseif ($Size -match "medium") {return "22"}
+        elseif ($Size -match "large") {return "23"}
+        elseif ($Size -match "xl") {return "24"}
+        elseif ($Size -match "xxl") {return "30"}
+        else {}
+    }
+    Elseif (((Import-Csv $file -Delimiter ";").Name) -match "Numergy") {
+        $Size = ((Import-Csv $file -Delimiter ";").Size)
+        if ($Size -match "XS") {return ""}
+        elseif ($Size -match "S") {return ""}
+        elseif ($Size -match "S+") {return ""}
+        elseif ($Size -match "L") {return ""}
+        elseif ($Size -match "L+") {return ""}
+        else {}
+    }
 }
 function CW-GetToken {
     $Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
@@ -119,15 +148,6 @@ function CW-GetToken {
     [xml]$auth = "<?xml version='1.0' encoding='UTF-8'?><auth xmlns='http://docs.openstack.org/identity/v2.0' tenantName='$Tenant'><passwordCredentials username='$Username' password='$Password'/></auth>"
     [xml]$TokenRequest = Invoke-WebRequest -Uri "https://identity.fr1.cloudwatt.com/v2.0/tokens" -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json"} -Body $auth
     $Token = $TokenRequest.access.token.id
-}
-function CW-GetSize {
-    $Size = ((Import-Csv $file -Delimiter ";").Size)
-        if ($Size -match "small") {return "21"}
-        elseif ($Size -match "medium") {return "22"}
-        elseif ($Size -match "large") {return "23"}
-        elseif ($Size -match "xl") {return "24"}
-        elseif ($Size -match "xxl") {return "30"}
-        else {}
 }
 function PacMan {
     if (((Import-Csv $file -Delimiter ";").Type) -match "Host") {
@@ -262,15 +282,13 @@ function PacMan {
             foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
                 $Token = ((Import-Csv $file -Delimiter ";").Token)
                 $Name = ((Import-Csv $file -Delimiter ";").Name)
-                $ImageSet = Get-ImageId
-                $RegionSet = Get-DORegions
-                $SizeSet = Get-DOSize
+                $ImageSet = Get-ImageId;$RegionSet = Get-DORegions;$SizeSet = Get-Size
                 Invoke-WebRequest -Uri "https://api.digitalocean.com/v2/v2/droplets" -ContentType "application/json" -Method Get -Headers @{'"Authorization" = "Bearer "'+$Token} -Body '{"name":"'+$Name+'","region":"'+$RegionSet+'","size:"'+$SizeSet+'","image":"'+$ImageSet+'","ssh_keys":null,"backups":false,"ipv6":true,"user_data":null,"private_networking":null}'  
             }
         }
         elseif (((Import-Csv $file -Delimiter ";").Name) -match "Cloudwatt") {
             foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
-                $TokenSet = CW-GetToken; $ImageSet = Get-ImageId; $SizeSet = CW-GetSize;$Name = ((Import-Csv $file -Delimiter ";").Name)
+                $TokenSet = CW-GetToken; $ImageSet = Get-ImageId; $SizeSet = Get-Size;$Name = ((Import-Csv $file -Delimiter ";").Name);$Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
                 [xml]$InsCreate = "<?xml version='1.0' encoding='UTF-8'?><server xmlns='http://docs.openstack.org/compute/api/v1.1' imageRef='$ImageSet' flavorRef='$SizeSet' name='$Name'></server>" 
                 Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers" -Method Post -ContentType "application/json" -Headers @{"Accept" = "application/json";"X-Auth-Token"= "$Token"
                 $ServerId = ((Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers" -Method Post -ContentType "application/json" -Headers @{"Accept" = "application/json";"X-Auth-Token"= "$Token"} -Body $InsCreate | ConvertFrom-Json).server).id
@@ -279,7 +297,17 @@ function PacMan {
                 Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers/$ServerId/action" -ContentType "application/json" -Method Post -Headers @"{Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'{"+'addFloatingIp":{"address":"'+$IP+'"}}'+"'"
             }      
         }
-        elseif (((Import-Csv $file -Delimiter ";").Name) -match "Numergy") {}
+        elseif (((Import-Csv $file -Delimiter ";").Name) -match "Numergy") {
+            $Tbody = '{"auth": {"apiAccessKeyCredentials": {"accessKey": "'+$accessKey+'","secretKey": "'+$secretKey+'" },"tenantId": "'+$tenantid+'" } }'
+            $Token = (((((Invoke-WebRequest -Uri $Uri -ContentType "application/json; charset=utf-8" -Headers @{"X-Auth-Token" = '"'+$Token+'"'} -Method Post -Body $TBody) | ConvertFrom-Json).access).token).id)
+            foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
+                $Nversion = "V2.0";$TenantID = ((Import-Csv $file -Delimiter ";").Tenant)
+                $Uri = "https://api2.numergy.com/$Nversion/$TenantID/servers"
+                $ImageSet = Get-ImageId;$SizeSet = Get-Size=$Name = ((Import-Csv $file -Delimiter ";").Name)
+                $Body = '{"server": {"flavorRef": "'+$SizeSet+'","imageRef": "'+$ImageSet+'","name": "'+$Name+'"}}'
+                Invoke-WebRequest -Uri $Uri -ContentType "application/json; charset=utf-8" -Headers @{"X-Auth-Token" = '"'+$Token+'"'} -Method Post -Body $Body
+            }
+        }
         elseif (((Import-Csv $file -Delimiter ";").Name) -match "OVH") {}
         elseif (((Import-Csv $file -Delimiter ";").Name) -match "Arubacloud") {}
         elseif (((Import-Csv $file -Delimiter ";").Name) -match "VMWare") {}
