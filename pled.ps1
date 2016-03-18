@@ -1,5 +1,5 @@
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-$version = "1.3"
+$version = "1.4"
 ## Import SSH Module
 if (Get-Command | Where {$_.Name -notmatch "New-SShSession"}){
     iex (New-Object Net.WebClient).DownloadString("https://gist.github.com/darkoperator/6152630/raw/c67de4f7cd780ba367cccbc2593f38d18ce6df89/instposhsshdev")
@@ -82,8 +82,19 @@ function Get-ImageId {
         elseif ($Image -match "FreeBSD") {return "13321858"}
         else {}
     }
+    Elseif if (((Import-Csv $file -Delimiter ";").Name) -match "Cloudwatt") {
+        $Image = ((Import-Csv $file -Delimiter ";").Image)
+        if ($Image -match "Ubuntu") {return "edffd57d-82bf-4ffe-b9e8-af22563741bf"}
+        elseif ($Image -match "Suse") {return "e194b52d-cf80-4b05-9be3-56a2f3ba10ff"}
+        elseif ($Image -match "CentOS") {return "86e61ee3-078f-405d-8eab-210174d20159"}
+        elseif ($Image -match "Fedora") {return "f77e7c4b-3ba6-4f1d-b1eb-69d20d5beee6"}
+        elseif ($Image -match "Windows 2012") {return "ed01abf8-e6a8-4dcf-b9bb-d2dd0aefd503"}
+        elseif ($Image -match "Windows 2008") {return "3d014779-fa19-49c8-8310-6c9a163ed934"}
+        else {}
+    }
+    else {}
 }
-Get-DORegions {
+function Get-DORegions {
     $Region = ((Import-Csv $file -Delimiter ";").Region)
         if ($Region -match "New York") {return "nyc1"}
         elseif ($Region -match "Amsterdam") {return "ams1"}
@@ -92,13 +103,30 @@ Get-DORegions {
         elseif ($Region -match "London") {return "lon1"}
         else {}
 }
-Get-DOSize {
+function Get-DOSize {
     $Size = ((Import-Csv $file -Delimiter ";").Size)
         if ($Size -match "small") {return "512mb"}
         elseif ($Size -match "medium") {return "1gb"}
         elseif ($Size -match "large") {return "2gb"}
         elseif ($Size -match "xl") {return "4gb"}
         elseif ($Size -match "xxl") {return "8gb"}
+        else {}
+}
+function CW-GetToken {
+    $Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
+    $Username = ((Import-Csv -Delimiter ";").Username)
+    $Password = ((Import-Csv -Delimiter ";").Password)
+    [xml]$auth = "<?xml version='1.0' encoding='UTF-8'?><auth xmlns='http://docs.openstack.org/identity/v2.0' tenantName='$Tenant'><passwordCredentials username='$Username' password='$Password'/></auth>"
+    [xml]$TokenRequest = Invoke-WebRequest -Uri "https://identity.fr1.cloudwatt.com/v2.0/tokens" -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json"} -Body $auth
+    $Token = $TokenRequest.access.token.id
+}
+function CW-GetSize {
+    $Size = ((Import-Csv $file -Delimiter ";").Size)
+        if ($Size -match "small") {return "21"}
+        elseif ($Size -match "medium") {return "22"}
+        elseif ($Size -match "large") {return "23"}
+        elseif ($Size -match "xl") {return "24"}
+        elseif ($Size -match "xxl") {return "30"}
         else {}
 }
 function PacMan {
@@ -237,19 +265,28 @@ function PacMan {
                 $ImageSet = Get-ImageId
                 $RegionSet = Get-DORegions
                 $SizeSet = Get-DOSize
-                Invoke-WebRequest -Uri "https://api.digitalocean.com/v2/v2/droplets" -ContentType "application/json" -Method Get -Headers @{"Authorization" = "Bearer "+$Token} -Body '{"name":"'+$Name+'","region":"'+$RegionSet+'","size:"'+$SizeSet+'","image":"'+$ImageSet+'","ssh_keys":null,"backups":false,"ipv6":true,"user_data":null,"private_networking":null}'  
+                Invoke-WebRequest -Uri "https://api.digitalocean.com/v2/v2/droplets" -ContentType "application/json" -Method Get -Headers @{'"Authorization" = "Bearer "'+$Token} -Body '{"name":"'+$Name+'","region":"'+$RegionSet+'","size:"'+$SizeSet+'","image":"'+$ImageSet+'","ssh_keys":null,"backups":false,"ipv6":true,"user_data":null,"private_networking":null}'  
             }
         }
+        elseif (((Import-Csv $file -Delimiter ";").Name) -match "Cloudwatt") {
+            foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
+                $TokenSet = CW-GetToken; $ImageSet = Get-ImageId; $SizeSet = CW-GetSize;$Name = ((Import-Csv $file -Delimiter ";").Name)
+                [xml]$InsCreate = "<?xml version='1.0' encoding='UTF-8'?><server xmlns='http://docs.openstack.org/compute/api/v1.1' imageRef='$ImageSet' flavorRef='$SizeSet' name='$Name'></server>" 
+                Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers" -Method Post -ContentType "application/json" -Headers @{"Accept" = "application/json";"X-Auth-Token"= "$Token"
+                $ServerId = ((Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers" -Method Post -ContentType "application/json" -Headers @{"Accept" = "application/json";"X-Auth-Token"= "$Token"} -Body $InsCreate | ConvertFrom-Json).server).id
+                $NetId = ((((Invoke-WebRequest -Uri "https://network.fr1.cloudwatt.com/v2.0/networks" -ContentType "application/json" -Method GET -Headers @"{Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'}) | ConvertFrom-Json).networks).id where {$_.name -match "public"})
+                $IP = (((Invoke-WebRequest -Uri "https://network.fr1.cloudwatt.com/v2.0/floatingips" -ContentType "application/json" -Method Post -Headers @"{Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'{"+'floatingip":{"floating_network_id":"'+$NetId+'"}}'+"'") | ConvertFrom-Json).floatingip).floating_ip_address
+                Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers/$ServerId/action" -ContentType "application/json" -Method Post -Headers @"{Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'{"+'addFloatingIp":{"address":"'+$IP+'"}}'+"'"
+            }      
+        }
+        elseif (((Import-Csv $file -Delimiter ";").Name) -match "Numergy") {}
+        elseif (((Import-Csv $file -Delimiter ";").Name) -match "OVH") {}
+        elseif (((Import-Csv $file -Delimiter ";").Name) -match "Arubacloud") {}
+        elseif (((Import-Csv $file -Delimiter ";").Name) -match "VMWare") {}
         else{}
     }
 }
 ################### Code ########################
 Write-Host "PoSH Easy Deploy $version"
 $file = Read-Host "Fichier d'inventaire"
-foreach ($i in ((Import-Csv $file -Delimiter ";" | select -Property IP).IP)) {
-    $password = ConvertTo-SecureString ((Import-Csv $file -Delimiter ";").Password) -AsPlainText -Force
-    $username = (Import-Csv $file -Delimiter ";").Username
-    $credentials = New-Object System.Management.Automation.PSCredential($username,$password) 
-    New-SSHSession -ComputerName $i -Port ((Import-Csv $file -Delimiter ";").Port) -Credential $credentials
-    PacMan
-}
+Pacman
