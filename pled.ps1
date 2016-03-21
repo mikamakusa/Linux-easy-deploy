@@ -115,6 +115,16 @@ function Get-ImageId {
                 "Windows 2008" {return "30"}
             }
         }
+        "Google" {
+            switch ($Image) {
+                "Debian" {return "projects/debian-cloud/global/images/debian-8-jessie-v20160301"}
+                "CentOS" {return "projects/centos-cloud/global/images/centos-7-v2016030"}
+                "Suse" {return "projects/suse-cloud/global/images/opensuse-13-2-v20160222"}
+                "Ubuntu" {return "projects/ubuntu-os-cloud/global/images/ubuntu-1510-wily-v20160315"}
+                "Windows 2008" {return "projects/windows-cloud/global/images/windows-server-2008-r2-dc-v20160224"}
+                "Windows 2012" {return "projects/windows-cloud/global/images/windows-server-2012-r2-dc-v20160224"}
+            }
+        }
         default {}
     }
 }
@@ -140,6 +150,11 @@ function Get-Regions {
                 "Italy2" {return "dc2"}
                 "Italy1" {return "dc1"}
             }
+        }
+        "Google" {
+            "Asia" {return "asia-east1-a"}
+            "Europe" {return "europe-west1-b"}
+            "US" {return "us-central1-a"}
         }
     }
 }
@@ -183,6 +198,14 @@ function Get-Size {
                 "XL"{return "4"}
             }
         }
+        "Google" {
+            $Region = ((Import-Csv $file -Delimiter ";").Region)
+            switch ($Region) {
+                "asia-east1-a" {return "https://content.googleapis.com/compute/v1/projects/$Project/zones/asia-east1-a/machineTypes/f1-micro"}
+                "europe-west1-b" {return "https://content.googleapis.com/compute/v1/projects/$Project/zones/europe-west1-b/machineTypes/f1-micro"}
+                "us-central1-a" {return "https://content.googleapis.com/compute/v1/projects/intricate-reef-125710/zones/us-central1-a/machineTypes/f1-micro"}
+            }
+        }
         default{}
     }
 }
@@ -216,6 +239,8 @@ function Get-Token {
             $Date = ((Get-Date -Format "yyyy-MM-dd"));$hour = (((get-date).AddHours("1")).Hour);$minutes = ((get-date).Minute);$seconds = ((get-date).Second);$Expiry = $date+"T"+$hour+"-"+$minutes+"-"+$seconds
             $Key = ((Import-Csv $file -Delimiter ";").Key)
             $Accesskey = "SharedAccessSignature uid=$Identifier&ex=$Expiry.0000000Z&sn=$Key"
+        }
+        "Google" {
         }
         default {}
     }   
@@ -410,6 +435,16 @@ function PacMan {
                 }
                 "Azure" {
                     Get-Token
+                }
+                "Google" {
+                    foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
+                        $Zone = Get-Regions;$ImageSet=Get-ImageId;$Name = ((Import-Csv $file -Delimiter ";").Name);$Project = ((Import-Csv $file -Delimiter ";").Project)
+                        $SizeSet = Get-Size;$Name = ((Import-Csv $file -Delimiter ";").Name);$Key = ((Import-Csv $file -Delimiter ";").Key)
+                        $headers = "headers=@{'Content-Type': 'application/x-www-form-urlencoded'}"
+                        $Body = '{'+'"name"'+': '+'"'+$Name+'"','"machineType"'+': '+'"'+$SizeSet+'"'+'"networkInterfaces"'+': [{'+'"accessConfigs"'+': [{'+'"type"'+': "ONE_TO_ONE_NAT",'+'"name"'+': "External NAT"'+'}],'+'"network"'+': "global/networks/default"'+'}],'+'"disks"'+': [{'+'"autoDelete"'+': "true",'+'"boot"'+': "true",'+'"type"'+': "PERSISTENT",'+'"initializeParams"'+': {'+'"sourceImage"'+': '+"$Image"+'}'+'}]'+'}'
+                        $Uri = "https://www.googleapis.com/compute/v1/projects/$Project/zones/$Zone/instances?key=$Key"
+                        Invoke-WebRequest -Uri $Uri -ContentType "application/json" -Headers $headers -Method POST -body $Body
+                    }
                 }
                 default{}
             }
