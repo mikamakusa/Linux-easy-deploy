@@ -1,5 +1,5 @@
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-$version = "1.4"
+$version = "1.3"
 ## Import SSH Module
 if (Get-Command | Where {$_.Name -notmatch "New-SShSession"}){
     iex (New-Object Net.WebClient).DownloadString("https://gist.github.com/darkoperator/6152630/raw/c67de4f7cd780ba367cccbc2593f38d18ce6df89/instposhsshdev")
@@ -63,258 +63,360 @@ function Check_AWS_tools{
     }
 }
 function Get-ImageId {
-    if (((Import-Csv $file -Delimiter ";").Name) -match "AWS") {
-        $Image = ((Import-Csv $file -Delimiter ";").Image)
-        if ($Image -match "Amazon") {return "ami-d22932be"}
-        elseif ($Image -match "Red Hat") {return "ami-875042eb"}
-        elseif ($Image -match "Suse") {return "ami-875042eb"}
-        elseif ($Image -match "Ubuntu") {return "ami-87564feb"}
-        elseif ($Image -match "Windows 2012") {return "ami-1135d17e"}
-        elseif ($Image -match "Windows 2008") {return "ami-e135d18e"}
-        else {}
+    $Image = ((Import-Csv $file -Delimiter ";").Image)
+    $Name = ((Import-Csv $file -Delimiter ";").Name)
+    switch ($Name) {
+        "AWS" {
+            switch ($Image) {
+                "Amazon" {return "ami-d22932be"}
+                "Red Hat" {return "ami-875042eb"}
+                "Suse" {return "ami-875042eb"}
+                "Ubuntu" {return "ami-87564feb"}
+                "Windows 2012" {return "ami-1135d17e"}
+                "Windows 2008" {return "ami-e135d18e"}
+            }
+        }
+        "DigitalOcean" {
+            switch ($Image) {
+                "Debian" {return "15611095"}
+                "Ubuntu" {return "15621816"}
+                "CentOS" {return "16040476"}
+                "Fedora" {return "14238961"}
+                "FreeBSD" {return "13321858"}
+                
+            }
+        }
+        "Cloudwatt" {
+            switch ($Image) {
+                "Ubuntu" {return "edffd57d-82bf-4ffe-b9e8-af22563741bf"}
+                "Suse" {return "e194b52d-cf80-4b05-9be3-56a2f3ba10ff"}
+                "CentOS" {return "86e61ee3-078f-405d-8eab-210174d20159"}
+                "Fedora" {return "f77e7c4b-3ba6-4f1d-b1eb-69d20d5beee6"}
+                "Windows 2012" {return "ed01abf8-e6a8-4dcf-b9bb-d2dd0aefd503"}
+                "Windows 2008" {return "3d014779-fa19-49c8-8310-6c9a163ed934"}
+            }
+        }
+        "Numergy" {
+            switch ($Image) {
+                "Ubuntu" {return "41221dc8-29e3-11e4-857f-005056992152"}
+                "Debian" {return "de8ff4bc-038c-11e5-bbd3-005056992152"}
+                "CentOS" {return "aadf1726-a838-11e2-816d-005056992152"}
+                "Red Hat" {return "aa56ee50-a838-11e2-816d-005056992152"}
+                "Windows 2008" {return "902771bc-47bf-11e4-857f-005056992152"}
+                "Windows 2012" {return "59bc519c-5846-11e3-8d40-005056992152"}
+            }
+        }
+        "ArubaCloud" {
+            switch ($Image) {
+                "Ubuntu" {return "125"}
+                "Debian" {return "17"}
+                "CentOS" {return "29"}
+                "Suse" {return "105"}
+                "Windows 2008" {return "30"}
+            }
+        }
+        default {}
     }
-    Elseif if (((Import-Csv $file -Delimiter ";").Name) -match "DigitalOcean") {
-        $Image = ((Import-Csv $file -Delimiter ";").Image)
-        if ($Image -match "Debian") {return "15611095"}
-        elseif ($Image -match "Ubuntu") {return "15621816"}
-        elseif ($Image -match "CentOS") {return "16040476"}
-        elseif ($Image -match "Fedora") {return "14238961"}
-        elseif ($Image -match "FreeBSD") {return "13321858"}
-        else {}
-    }
-    Elseif if (((Import-Csv $file -Delimiter ";").Name) -match "Cloudwatt") {
-        $Image = ((Import-Csv $file -Delimiter ";").Image)
-        if ($Image -match "Ubuntu") {return "edffd57d-82bf-4ffe-b9e8-af22563741bf"}
-        elseif ($Image -match "Suse") {return "e194b52d-cf80-4b05-9be3-56a2f3ba10ff"}
-        elseif ($Image -match "CentOS") {return "86e61ee3-078f-405d-8eab-210174d20159"}
-        elseif ($Image -match "Fedora") {return "f77e7c4b-3ba6-4f1d-b1eb-69d20d5beee6"}
-        elseif ($Image -match "Windows 2012") {return "ed01abf8-e6a8-4dcf-b9bb-d2dd0aefd503"}
-        elseif ($Image -match "Windows 2008") {return "3d014779-fa19-49c8-8310-6c9a163ed934"}
-        else {}
-    }
-    Elseif if (((Import-Csv $file -Delimiter ";").Name) -match "Numergy") {
-        $Image = ((Import-Csv $file -Delimiter ";").Image)
-        if ($Image -match "Ubuntu") {return ""}
-        elseif ($Image -match "Debian") {return ""}
-        elseif ($Image -match "CentOS") {return ""}
-        elseif ($Image -match "Red Hat") {return ""}
-        elseif ($Image -match "Windows") {return ""}
-        else {}
-    }
-    else {}
 }
-function Get-DORegions {
+function Get-Regions {
     $Region = ((Import-Csv $file -Delimiter ";").Region)
-        if ($Region -match "New York") {return "nyc1"}
-        elseif ($Region -match "Amsterdam") {return "ams1"}
-        elseif ($Region -match "San Francisco") {return "sfo1"}
-        elseif ($Region -match "Singapore") {return "sgp1"}
-        elseif ($Region -match "London") {return "lon1"}
-        else {}
+    $Name = ((Import-Csv $file -Delimiter ";").Name)
+    switch ($Name) {
+        "Digital Ocean" {
+            switch ($Region) {
+                "New York" {return "nyc1"}
+                "Amsterdam" {return "ams1"}
+                "San Francisco" {return "sfo1"}
+                "Singapore" {return "sgp1"}
+                "London" {return "lon1"}
+            }
+        }
+        "ArubaCloud" {
+            switch ($Region) {
+                "UK" {return "dc6"}
+                "Germany" {return "dc5"}
+                "France" {return "dc4"}
+                "Czech Republic" {return "dc3"}
+                "Italy2" {return "dc2"}
+                "Italy1" {return "dc1"}
+            }
+        }
+    }
 }
 function Get-Size {
-    if (((Import-Csv $file -Delimiter ";").Name) -match "Digital Ocean") {
-        $Size = ((Import-Csv $file -Delimiter ";").Size)
-        if ($Size -match "small") {return "512mb"}
-        elseif ($Size -match "medium") {return "1gb"}
-        elseif ($Size -match "large") {return "2gb"}
-        elseif ($Size -match "xl") {return "4gb"}
-        elseif ($Size -match "xxl") {return "8gb"}
-        else {}
+    $Size = ((Import-Csv $file -Delimiter ";").Size)
+    $Name = ((Import-Csv $file -Delimiter ";").Name)
+    switch ($Name) {
+        "Digital Ocean" {
+            switch ($Size) {
+                "small" {return "512mb"}
+                "medium" {return "1gb"}
+                "large" {return "2gb"}
+                "xl" {return "4gb"}
+                "xxl" {return "8gb"}
+            }
         }
-    Elseif (((Import-Csv $file -Delimiter ";").Name) -match "Cloudwatt") {
-        $Size = ((Import-Csv $file -Delimiter ";").Size)
-        if ($Size -match "small") {return "21"}
-        elseif ($Size -match "medium") {return "22"}
-        elseif ($Size -match "large") {return "23"}
-        elseif ($Size -match "xl") {return "24"}
-        elseif ($Size -match "xxl") {return "30"}
-        else {}
-    }
-    Elseif (((Import-Csv $file -Delimiter ";").Name) -match "Numergy") {
-        $Size = ((Import-Csv $file -Delimiter ";").Size)
-        if ($Size -match "XS") {return ""}
-        elseif ($Size -match "S") {return ""}
-        elseif ($Size -match "S+") {return ""}
-        elseif ($Size -match "L") {return ""}
-        elseif ($Size -match "L+") {return ""}
-        else {}
+        "Cloudwatt" {
+            switch ($Size) {
+                "small" {return "21"}
+                "medium" {return "22"}
+                "large" {return "23"}
+                "xl" {return "24"}
+                "xxl" {return "30"}
+            }
+        }
+        "Numergy" {
+            switch ($Size) {
+                "XS" {return "bbe1760a-30ef-11e3-8d40-005056992152"}
+                "S" {return "01c25006-a5c0-11e2-816d-005056992152"}
+                "S+" {return "01c250a6-a5c0-11e2-816d-005056992152"}
+                "L" {return "01c24ca0-a5c0-11e2-816d-005056992152"}
+                "L+" {return "01c24f52-a5c0-11e2-816d-005056992152"}
+                "XL" {return "01c25132-a5c0-11e2-816d-005056992152"}
+            }
+        }
+        "ArubaCloud" {
+            switch ($Size) {
+                "S" {return "1"}
+                "M" {return "2"}
+                "L" {return "3"}
+                "XL"{return "4"}
+            }
+        }
+        default{}
     }
 }
-function CW-GetToken {
-    $Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
-    $Username = ((Import-Csv -Delimiter ";").Username)
-    $Password = ((Import-Csv -Delimiter ";").Password)
-    [xml]$auth = "<?xml version='1.0' encoding='UTF-8'?><auth xmlns='http://docs.openstack.org/identity/v2.0' tenantName='$Tenant'><passwordCredentials username='$Username' password='$Password'/></auth>"
-    [xml]$TokenRequest = Invoke-WebRequest -Uri "https://identity.fr1.cloudwatt.com/v2.0/tokens" -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json"} -Body $auth
-    $Token = $TokenRequest.access.token.id
+function Get-Token {
+    $Name = ((Import-Csv $file -Delimiter ";").Name)
+    switch ($Name) {
+        "Cloudwatt" {
+            $Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
+            $Username = ((Import-Csv -Delimiter ";").Username)
+            $Password = ((Import-Csv -Delimiter ";").Password)
+            [xml]$auth = "<?xml version='1.0' encoding='UTF-8'?><auth xmlns='http://docs.openstack.org/identity/v2.0' tenantName='$Tenant'><passwordCredentials username='$Username' password='$Password'/></auth>"
+            [xml]$TokenRequest = Invoke-WebRequest -Uri "https://identity.fr1.cloudwatt.com/v2.0/tokens" -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json"} -Body $auth
+            $Token = $TokenRequest.access.token.id
+        }
+        "Numergy" {
+            $TenantId = ((Import-Csv $file -Delimiter ";").TenantId)
+            $Accesskey = ((Import-Csv -Delimiter ";").AccessKey)
+            $SecretKey = ((Import-Csv -Delimiter ";").SecretKey)
+            $Nversion = ((Invoke-WebRequest -Uri "https://api2.numergy.com/" -ContentType "application/json; charset=utf-8" -Method Get | ConvertFrom-Json).versions | select -Property id,status -Last 1).id
+            $Tbody = '{"auth": {"apiAccessKeyCredentials": {"accessKey": "'+$AccessKey+'","secretKey": "'+$SecretKey+'" },"tenantId": "'+$tenantId+'" } }'
+            $Token = (((((Invoke-WebRequest -Uri "https://api2.numergy.com/V3.0/tokens" -ContentType "application/json; charset=utf-8" -Method Post -Body $TBody) | ConvertFrom-Json).access).token).id)
+        }
+        "OVH" {
+            $AppKey = ((Import-Csv $file -Delimiter ";").ApplicationKey)
+            $Uri = "https://eu.api.ovh.com/1.0/auth/credential"
+            Invoke-WebRequest -Uri $Uri -ContentType "application/json" -Headers @{"X-Ovh-Application" = $AppKey} -Method Post -Body '{"accessRules":[{"method": "GET","path": "/*"}],"redirection":"https://www.mywebsite.com/"}'
+        }
+        "Azure" {
+            $Identifier = ((Import-Csv $file -Delimiter ";").Identifier)
+            $APIid = ((Import-Csv $file -Delimiter ";").APIid)
+            $Date = ((Get-Date -Format "yyyy-MM-dd"));$hour = (((get-date).AddHours("1")).Hour);$minutes = ((get-date).Minute);$seconds = ((get-date).Second);$Expiry = $date+"T"+$hour+"-"+$minutes+"-"+$seconds
+            $Key = ((Import-Csv $file -Delimiter ";").Key)
+            $Accesskey = "SharedAccessSignature uid=$Identifier&ex=$Expiry.0000000Z&sn=$Key"
+        }
+        default {}
+    }   
 }
+## Main function
 function PacMan {
-    if (((Import-Csv $file -Delimiter ";").Type) -match "Host") {
+    $Type = ((Import-Csv $file -Delimiter ";").Type)
+    switch ($Type) {
+        "Host" {
             foreach ($i in (Import-Csv -Delimiter ";").Name) {
-                $username = (Import-Csv -Delimiter ";").Username
-                $password = ConvertTo-SecureString ((Import-Csv $file -Delimiter ";").Password) -AsPlainText -Force
-                $credentials = New-Object System.Management.Automation.PSCredential($username,$password)
-                New-SSHSession -ComputerName $i -Port ((Import-Csv $file -Delimiter ";").Port) -Credential $credentials
-                if ((Import-Csv $file -Delimiter ";") -match "Package") {
+            $username = (Import-Csv -Delimiter ";").Username
+            $password = ConvertTo-SecureString ((Import-Csv $file -Delimiter ";").Password) -AsPlainText -Force
+            $credentials = New-Object System.Management.Automation.PSCredential($username,$password)
+            New-SSHSession -ComputerName $i -Port ((Import-Csv $file -Delimiter ";").Port) -Credential $credentials
+            $Part = ((Import-Csv $file -Delimiter ";").Part)
+            switch ($Part) {
+                "Package" {
                     $packman = "apt-get","zypper","yum","urpmi","slackpkg","slapt-get","netpkg","equo","pacman","conary","apk add","emerge","lin","cast","niv-env","xpbs","snappy"
                     foreach ($item in packman) {
                         if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$item").ExitStatus -notmatch "127")) {
                             foreach ($p in ((Import-Csv $file -Delimiter ";").Packages)) {
                                 $Action = (Import-Csv $file -Delimiter ";").Action
-                                if ($Action -match "Install") {
-                                    if ($item -match "apt-get" -or "zypper" -or "yum" -or "slackpkg" -or "equo" -or "snappy") {return $item+" install -y "+$p}
-                                    elseif ($item -match "slapt-get") {return $item+" --install -y "+$p}
-                                    elseif ($item -match "pacman") {return $item+" -S "+$p}
-                                    elseif ($item -match "conary") {return $item+" update "+$p}
-                                    elseif ($item -match "apk") {return $item+" add "+$p}
-                                    elseif ($item -match "nix-env") {return $item+" -i "+$p}
-                                    elseif ($item -match "xpbs") {return $item+"-install "+$p}
-                                    else {return $item+" "+$p}
+                                switch ($Action) {
+                                    "Install" {
+                                        if ($item -match "apt-get" -or "zypper" -or "yum" -or "slackpkg" -or "equo" -or "snappy") {return $item+" install -y "+$p}
+                                        elseif ($item -match "slapt-get") {return $item+" --install -y "+$p}
+                                        elseif ($item -match "pacman") {return $item+" -S "+$p}
+                                        elseif ($item -match "conary") {return $item+" update "+$p}
+                                        elseif ($item -match "apk") {return $item+" add "+$p}
+                                        elseif ($item -match "nix-env") {return $item+" -i "+$p}
+                                        elseif ($item -match "xpbs") {return $item+"-install "+$p}
+                                        else {return $item+" "+$p}
+                                    }
+                                    "Remove" {
+                                        if ($item -match "apt-get"-or "zypper" -or "slackpkg" -or "equo" -or "snappy" -or "netpkg") {return $item+" remove -y "+$p}
+                                        elseif ($item -match "yum" -or "conary") {return $item+" erase -y "+$p}
+                                        elseif ($item -match "slapt-get") {return $item+" --remove -y "+$p}
+                                        elseif ($item -match "urpmi") {return "urpme "+$p}
+                                        elseif ($item -match "pacman") {return $item+" -R "+$p}
+                                        elseif ($item -match "apk") {return $item+" del "+$p}
+                                        elseif ($item -match "emerge") {return $item+" -aC "+$p}
+                                        elseif ($item -match "lin") {return "lrm "+$p}
+                                        elseif ($item -match "cast") {return "dispel "+$p}
+                                        elseif ($item -match "nix-env") {return $item+" -e "+$p}
+                                        elseif ($item -match "xpbs") {return $item+"-remove "+$p}
+                                        else {}
+                                    }
+                                    "Search" {
+                                        if ($item -match "apt-get") {return "apt-cache "+$p}
+                                        elseif ($item -match "zypper") {return $item+" search -t pattern "+$p}
+                                        elseif ($item -match "yum" -or "equo" -or "slackpkg" -or "apk" -or "snappy") {return $item+"search "+$p}
+                                        elseif ($item -match "urpmi") {return "urpmq -fuzzy "+$p}
+                                        elseif ($item -match "netpkg") {return $item+"list | grep "+$p}
+                                        elseif ($item -match "conary") {return $item+" query "+$p}
+                                        elseif ($item -match "Pacman") {return $item+" -S "+$p}
+                                        elseif ($item -match "emerge") {return $item+" --search "+$p}
+                                        elseif ($item -match "lin") {return "lvu search "+$p}
+                                        elseif ($item -match "cast") {return "gaze search "+$p}
+                                        elseif ($item -match "nix-env") {return " -qa "+$p}
+                                        else {return "xbps-query -Rs "+$p}
+                                    }
+                                    "UpSystem" {
+                                        if ($item -match "zypper" -or "yum" -or "snappy") {return $item+" update -y"}
+                                        elseif ($item -match "apt" -or "netpkg" -or "equo" -or "apk" ) {return $item+" upgrade -y"}
+                                        elseif ($item -match "urpmi") {return $item+" --auto-select"}
+                                        elseif ($item -match "slapt-get") {return $item+" --upgrade"}
+                                        elseif ($item -match "slackpkg") {return $item+" upgrade-all"}
+                                        elseif ($item -match "pacman") {return $item+" -Su"}
+                                        elseif ($item -match "conary") {return $item+" updateall"}
+                                        elseif ($item -match "emerge") {return $item+" -NuDa world"}
+                                        elseif ($item -match "lin") {return "lunar update"}
+                                        elseif ($item -match "cast") {return "sorcery upgrade"}
+                                        elseif ($item -match "nix-env") {return "-u"}
+                                        else {return "xbps-install -u"}
+                                    }
+                                    "UpPackage" {
+                                        if ($item -match "zypper") {return $item+" refresh -y "+$p}
+                                        elseif ($item -match "yum") {return $item+" check-update "+$p}
+                                        elseif ($item -match "apt" -or "equo" -or "apk" -or "slackpkg") {return $item+" update -y "+$p}
+                                        elseif ($item -match "urpmi") {return $item+".update -a "+$p}
+                                        elseif ($item -match "slapt-get") {return $item+" --update "+$p}
+                                        elseif ($item -match "pacman") {return $item+" -Sy "+$p}
+                                        elseif ($item -match "emerge") {return $item+" --sync "+$p}
+                                        elseif ($item -match "lin") {return "lin moonbase "+$p}
+                                        elseif ($item -match "cast") {return "scribe update "+$p}
+                                        elseif ($item -match "nix-env") {return "nix-channel --update "+$p}
+                                        else {return "xbps-install -u "+$p}
+                                    }
+                                    default {return "Erreur - Commande inconnue ou non reférencée"}
                                 }
-                                elseif ($Action -match "Remove") {
-                                    if ($item -match "apt-get"-or "zypper" -or "slackpkg" -or "equo" -or "snappy" -or "netpkg") {return $item+" remove -y "+$p}
-                                    elseif ($item -match "yum" -or "conary") {return $item+" erase -y "+$p}
-                                    elseif ($item -match "slapt-get") {return $item+" --remove -y "+$p}
-                                    elseif ($item -match "urpmi") {return "urpme "+$p}
-                                    elseif ($item -match "pacman") {return $item+" -R "+$p}
-                                    elseif ($item -match "apk") {return $item+" del "+$p}
-                                    elseif ($item -match "emerge") {return $item+" -aC "+$p}
-                                    elseif ($item -match "lin") {return "lrm "+$p}
-                                    elseif ($item -match "cast") {return "dispel "+$p}
-                                    elseif ($item -match "nix-env") {return $item+" -e "+$p}
-                                    elseif ($item -match "xpbs") {return $item+"-remove "+$p}
-                                    else {}
-                                }
-                                elseif ($Action -match "Search") {
-                                    if ($item -match "apt-get") {return "apt-cache "+$p}
-                                    elseif ($item -match "zypper") {return $item+" search -t pattern "+$p}
-                                    elseif ($item -match "yum" -or "equo" -or "slackpkg" -or "apk" -or "snappy") {return $item+"search "+$p}
-                                    elseif ($item -match "urpmi") {return "urpmq -fuzzy "+$p}
-                                    elseif ($item -match "netpkg") {return $item+"list | grep "+$p}
-                                    elseif ($item -match "conary") {return $item+" query "+$p}
-                                    elseif ($item -match "Pacman") {return $item+" -S "+$p}
-                                    elseif ($item -match "emerge") {return $item+" --search "+$p}
-                                    elseif ($item -match "lin") {return "lvu search "+$p}
-                                    elseif ($item -match "cast") {return "gaze search "+$p}
-                                    elseif ($item -match "nix-env") {return " -qa "+$p}
-                                    else {return "xbps-query -Rs "+$p}
-                                }
-                                elseif ($Action -match "UpSystem") {
-                                    if ($item -match "zypper" -or "yum" -or "snappy") {return $item+" update -y"}
-                                    elseif ($item -match "apt" -or "netpkg" -or "equo" -or "apk" ) {return $item+" upgrade -y"}
-                                    elseif ($item -match "urpmi") {return $item+" --auto-select"}
-                                    elseif ($item -match "slapt-get") {return $item+" --upgrade"}
-                                    elseif ($item -match "slackpkg") {return $item+" upgrade-all"}
-                                    elseif ($item -match "pacman") {return $item+" -Su"}
-                                    elseif ($item -match "conary") {return $item+" updateall"}
-                                    elseif ($item -match "emerge") {return $item+" -NuDa world"}
-                                    elseif ($item -match "lin") {return "lunar update"}
-                                    elseif ($item -match "cast") {return "sorcery upgrade"}
-                                    elseif ($item -match "nix-env") {return "-u"}
-                                    else {return "xbps-install -u"}
-                                }
-                                elseif ($Action -match "UpPackage") {
-                                    if ($item -match "zypper") {return $item+" refresh -y "+$p}
-                                    elseif ($item -match "yum") {return $item+" check-update "+$p}
-                                    elseif ($item -match "apt" -or "equo" -or "apk" -or "slackpkg") {return $item+" update -y "+$p}
-                                    elseif ($item -match "urpmi") {return $item+".update -a "+$p}
-                                    elseif ($item -match "slapt-get") {return $item+" --update "+$p}
-                                    elseif ($item -match "pacman") {return $item+" -Sy "+$p}
-                                    elseif ($item -match "emerge") {return $item+" --sync "+$p}
-                                    elseif ($item -match "lin") {return "lin moonbase "+$p}
-                                    elseif ($item -match "cast") {return "scribe update "+$p}
-                                    elseif ($item -match "nix-env") {return "nix-channel --update "+$p}
-                                    else {return "xbps-install -u "+$p}
-                                }
-                                else {return "Erreur - Commande inconnue ou non reférencée"}
                             }
                         }
                     }
                 }
-                elseif ((Import-Csv $file -Delimiter ";") -match "Docker") {
+                "Docker" {
                     if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker").ExitStatus -notmatch "127")) {          
                         $Action = (Import-Csv $file -Delimiter ";").Action
-                        if ($Action -match "Deploy"){
-                            $Image = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Image)){}else{((Import-Csv $file -Delimiter ";").Image)} 
-                            $Mode = if (((Import-Csv $file -Delimiter ";").Mode) -match "daemon"){"-dit"}else{"-a=['STDIN'] -a=['STDOUT'] -a=['STDERR']"}
-                            $CName = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").CName)){}else{"--name "+((Import-Csv $file -Delimiter ";").CName)}
-                            $Network = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Network)){}else{"--net="+'"'+((Import-Csv $file -Delimiter ";").Network)+'"'}
-                            $AddHost = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").AddHost)){}else{"--add-hosts "+((Import-Csv $file -Delimiter ";").AddHost)}
-                            $DNS = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").DNS)){}else{"--dns=["+((Import-Csv $file -Delimiter ";").DNS)+']'}
-                            $Restart = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").RestartPolicies)){}else{"--restart="+((Import-Csv $file -Delimiter ";").RestartPolicies)}
-                            $EnPoint = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").EntryPoint)){}else{"--entrypoint="+((Import-Csv $file -Delimiter ";").EntryPoint)}
-                            $CMD = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").CMD)){}else{"--restart="+((Import-Csv $file -Delimiter ";").CMD)}
-                            $PExpose =  if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").PortsExpose)){}else{"--expose=["+((Import-Csv $file -Delimiter ";").PortsExpose)+']'}
-                            $PPublish = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").PortsPublish)){}else{"-P=["+((Import-Csv $file -Delimiter ";").PortsPublish)+']'}
-                            $Volume = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Volumes)){}else{"-v "+((Import-Csv $file -Delimiter ";").Volumes)}
-                            $Link = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Links)){}else{"--link "+((Import-Csv $file -Delimiter ";").Links)}
-                            Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker run" $Restart $Mode $PExpose $PPublish $AddHost $Network $DNS $CName $Link $Volume $EnPoint $Image $CMD
-                        }
-                        if ($Action -match "Build") {
-                            Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "Docker Build -t "+((Import-Csv $file -Delimiter ";").IName)+" ."
-                        }
-                        if ($Action -match "Stop") {
-                            Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker stop "+((Import-Csv $file -Delimiter ";").CId)
-                        }
-                        if ($Action -match "Remove") {
-                            Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker rm "+((Import-Csv $file -Delimiter ";").CId)
+                        switch ($Action) {
+                            "Deploy"{
+                                $Image = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Image)){}else{((Import-Csv $file -Delimiter ";").Image)} 
+                                $Mode = if (((Import-Csv $file -Delimiter ";").Mode) -match "daemon"){"-dit"}else{"-a=['STDIN'] -a=['STDOUT'] -a=['STDERR']"}
+                                $CName = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").CName)){}else{"--name "+((Import-Csv $file -Delimiter ";").CName)}
+                                $Network = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Network)){}else{"--net="+'"'+((Import-Csv $file -Delimiter ";").Network)+'"'}
+                                $AddHost = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").AddHost)){}else{"--add-hosts "+((Import-Csv $file -Delimiter ";").AddHost)}
+                                $DNS = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").DNS)){}else{"--dns=["+((Import-Csv $file -Delimiter ";").DNS)+']'}
+                                $Restart = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").RestartPolicies)){}else{"--restart="+((Import-Csv $file -Delimiter ";").RestartPolicies)}
+                                $EnPoint = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").EntryPoint)){}else{"--entrypoint="+((Import-Csv $file -Delimiter ";").EntryPoint)}
+                                $CMD = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").CMD)){}else{"--restart="+((Import-Csv $file -Delimiter ";").CMD)}
+                                $PExpose =  if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").PortsExpose)){}else{"--expose=["+((Import-Csv $file -Delimiter ";").PortsExpose)+']'}
+                                $PPublish = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").PortsPublish)){}else{"-P=["+((Import-Csv $file -Delimiter ";").PortsPublish)+']'}
+                                $Volume = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Volumes)){}else{"-v "+((Import-Csv $file -Delimiter ";").Volumes)}
+                                $Link = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Links)){}else{"--link "+((Import-Csv $file -Delimiter ";").Links)}
+                                Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker run" $Restart $Mode $PExpose $PPublish $AddHost $Network $DNS $CName $Link $Volume $EnPoint $Image $CMD
+                            }
+                            "Build" {
+                                Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "Docker Build -t "+((Import-Csv $file -Delimiter ";").IName)+" ."
+                            }
+                            "Stop" {
+                                Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker stop "+((Import-Csv $file -Delimiter ";").CId)
+                            }
+                            "Remove" {
+                                Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker rm "+((Import-Csv $file -Delimiter ";").CId)
+                            }
                         }
                     }
                     else {(Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "curl -sSL https://get.docker.com/ | sh")}
                 }
-            }
-        }
-    elseif (((Import-Csv $file -Delimiter ";").Type) -match "Provider") {
-        if (((Import-Csv $file -Delimiter ";").Name) -match "AWS") {
-            Check_AWS_tools
-            if (((Get-WmiObject -Class Win32_OperatingSystem).Caption -match "Windows 2012") -or (((Get-WmiObject -Class Win32_OperatingSystem).Caption -match "Windows 2008") -and (($Host).Version).Major -match "4")) {
-                foreach ($item in ((Import-Csv $file -Delimiter ";").InstanceTag)) {
-                    $ImageSet = Get-ImageId
-                    $AWSKey = New-EC2KeyPair -KeyName ((Import-Csv $file -Delimiter ";").Key)
-                    $SGroup = New-EC2SecurityGroup -GroupName ((Import-Csv $file -Delimiter ";").SGroup)
-                    New-EC2Instance -ImageId $Image -KeyName $AWSKey -SecurityGroupId $SGroup
+                #"Firewall" {}
+                default {}
                 }
             }
-            else {}
         }
-        elseif (((Import-Csv $file -Delimiter ";").Name) -match "DigitalOcean"){ 
-            foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
-                $Token = ((Import-Csv $file -Delimiter ";").Token)
-                $Name = ((Import-Csv $file -Delimiter ";").Name)
-                $ImageSet = Get-ImageId;$RegionSet = Get-DORegions;$SizeSet = Get-Size
-                Invoke-WebRequest -Uri "https://api.digitalocean.com/v2/v2/droplets" -ContentType "application/json" -Method Get -Headers @{'"Authorization" = "Bearer "'+$Token} -Body '{"name":"'+$Name+'","region":"'+$RegionSet+'","size:"'+$SizeSet+'","image":"'+$ImageSet+'","ssh_keys":null,"backups":false,"ipv6":true,"user_data":null,"private_networking":null}'  
+        "Provider" {
+            $Name = ((Import-Csv $file -Delimiter ";").Name)
+            switch ($Name) {
+                "AWS" {
+                    Check_AWS_tools
+                    if (((Get-WmiObject -Class Win32_OperatingSystem).Caption -match "Windows 2012") -or (((Get-WmiObject -Class Win32_OperatingSystem).Caption -match "Windows 2008") -and (($Host).Version).Major -match "4")) {
+                        foreach ($item in ((Import-Csv $file -Delimiter ";").InstanceTag)) {
+                            $ImageSet = Get-ImageId
+                            $AWSKey = New-EC2KeyPair -KeyName ((Import-Csv $file -Delimiter ";").Key)
+                            $SGroup = New-EC2SecurityGroup -GroupName ((Import-Csv $file -Delimiter ";").SGroup)
+                            New-EC2Instance -ImageId $Image -KeyName $AWSKey -SecurityGroupId $SGroup
+                        }
+                    }
+                    else {}
+                }
+                "DigitalOcean" { 
+                    foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
+                        $Token = ((Import-Csv $file -Delimiter ";").Token)
+                        $Name = ((Import-Csv $file -Delimiter ";").Name)
+                        $ImageSet = Get-ImageId;$RegionSet = Get-Regions;$SizeSet = Get-Size
+                        Invoke-WebRequest -Uri "https://api.digitalocean.com/v2/droplets" -ContentType "application/json" -Method Get -Headers @{'"Authorization" = "Bearer "'+$Token} -Body '{"name":"'+$Name+'","region":"'+$RegionSet+'","size:"'+$SizeSet+'","image":"'+$ImageSet+'","ssh_keys":null,"backups":false,"ipv6":true,"user_data":null,"private_networking":null}'  
+                    }
+                }
+                "Cloudwatt" {
+                    foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
+                        $TokenSet = CW-GetToken; $ImageSet = Get-ImageId; $SizeSet = Get-Size;$Name = ((Import-Csv $file -Delimiter ";").Name);$Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
+                        [xml]$InsCreate = "<?xml version='1.0' encoding='UTF-8'?><server xmlns='http://docs.openstack.org/compute/api/v1.1' imageRef='$ImageSet' flavorRef='$SizeSet' name='$Name'></server>" 
+                        Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers" -Method Post -ContentType "application/json" -Headers @{"Accept" = "application/json";"X-Auth-Token"= "$Token"}
+                        $ServerId = ((Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers" -Method Post -ContentType "application/json" -Headers @{"Accept" = "application/json";"X-Auth-Token"= "$Token"} -Body $InsCreate | ConvertFrom-Json).server).id
+                        $NetId = ((((Invoke-WebRequest -Uri "https://network.fr1.cloudwatt.com/v2/networks" -ContentType "application/json" -Method GET -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'}) | ConvertFrom-Json).networks).id | where {$_.name -match "public"})
+                        $IP = (((Invoke-WebRequest -Uri "https://network.fr1.cloudwatt.com/v2/floatingips" -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'"+"{"+"floatingip"+':'+'{'+'"'+"floating_network_id"+'"'+':'+'"'+$NetId+'"}}'+"'" | ConvertFrom-Json).floatingip).floating_ip_address)
+                        Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers/$ServerId/action" -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'{"+'addFloatingIp":{"address":"'+$IP+'"}}'+"'"
+                    }      
+                }
+                "Numergy" {
+                    $Nversion = ((Invoke-WebRequest -Uri "https://api2.numergy.com/" -ContentType "application/json; charset=utf-8" -Method Get | ConvertFrom-Json).versions | select -Property id,status -Last 1).id
+                    $TokenSet = Get-Token;$TenantID = ((Import-Csv $file -Delimiter ";").Tenant)
+                    foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
+                        $Uri = "https://api2.numergy.com/$Nversion/$TenantID/servers"
+                        $ImageSet = Get-ImageId;$SizeSet = Get-Size;$Name = ((Import-Csv $file -Delimiter ";").Name)
+                        $Body = '{"server": {"flavorRef": "'+$SizeSet+'","imageRef": "'+$ImageSet+'","name": "'+$Name+'"}}'
+                        Invoke-WebRequest -Uri $Uri -ContentType "application/json; charset=utf-8" -Headers @{"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Post -Body $Body
+                    }
+                }
+                "OVH" {
+                    $TokenSet = Get-Token;$time = Invoke-WebRequest -Uri "https://eu.api.ovh.com/1.0/auth/time"
+                    foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {}
+                }
+                "Arubacloud" {
+                    $apiversion = "v2.8"
+                    $Username = ((Import-Csv $file -Delimiter ";").Username);$Password = ((Import-Csv $file -Delimiter ";").Password)
+                    foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
+                        $AdminPass = ((Import-Csv $file -Delimiter ";").AdminPass);$dcx = Get-Regions;$ImageSet = Get-ImageId;$SizeSet = Get-Size;$Name = ((Import-Csv $file -Delimiter ";").Name)
+                        $Uri = "https://api.$dcx.computing.cloud.it/WsEndUser/$apiversion/WsEndUser.svc/soap11"
+                        [xml]$SOAPBody = "<soap:Envelope xmlns:arub='http://schemas.datacontract.org/2004/07/Aruba.Cloud.Provisioning.Entities' xmlns:soap='http://www.w3.org/2003/05/soap-envelope' xmlns:wsen='https://api.computing.cloud.it/WsEndUser'><soap:Header><wsse:Security soap:mustUnderstand='true' xmlns:wsse='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd' xmlns:wsu='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'><wsse:UsernameToken wsu:Id='UsernameToken-D73AFF2E1B956DC7A7145854908826214'><wsse:Username>$Username</wsse:Username><wsse:Password Type='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText'>$Password</wsse:Password><wsse:Nonce EncodingType='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'>8vRx/zg0wCriFAUUPLcYdw==</wsse:Nonce><wsu:Created>2016-03-21T08:31:28.262Z</wsu:Created></wsse:UsernameToken></wsse:Security></soap:Header><soap:Body><wsen:SetEnqueueServerCreation><wsen:server><arub:AdministratorPassword>$AdminPass</arub:AdministratorPassword><arub:Name>$Name</arub:Name><arub:OSTemplateId>$ImageSet</arub:OSTemplateId><arub:SmartVMWarePackageID>$SizeSet</arub:SmartVMWarePackageID></wsen:server></wsen:SetEnqueueServerCreation></soap:Body></soap:Envelope>"
+                        $headers = "SOAPAction: https://api.computing.cloud.it/WsEndUser/IWsEndUser/SetEnqueueServerCreation"
+                        [System.Net.ServicPointManager]::ServerCertificateValidationCallback = $null
+                        Invoke-WebRequest -Uri $uri -Method Post -ContentType "text/xml; charset=utf-8" -headers $headers -Body $SOAPBody
+                    }
+                }
+                "Azure" {
+                    Get-Token
+                }
+                default{}
             }
         }
-        elseif (((Import-Csv $file -Delimiter ";").Name) -match "Cloudwatt") {
-            foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
-                $TokenSet = CW-GetToken; $ImageSet = Get-ImageId; $SizeSet = Get-Size;$Name = ((Import-Csv $file -Delimiter ";").Name);$Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
-                [xml]$InsCreate = "<?xml version='1.0' encoding='UTF-8'?><server xmlns='http://docs.openstack.org/compute/api/v1.1' imageRef='$ImageSet' flavorRef='$SizeSet' name='$Name'></server>" 
-                Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers" -Method Post -ContentType "application/json" -Headers @{"Accept" = "application/json";"X-Auth-Token"= "$Token"
-                $ServerId = ((Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers" -Method Post -ContentType "application/json" -Headers @{"Accept" = "application/json";"X-Auth-Token"= "$Token"} -Body $InsCreate | ConvertFrom-Json).server).id
-                $NetId = ((((Invoke-WebRequest -Uri "https://network.fr1.cloudwatt.com/v2.0/networks" -ContentType "application/json" -Method GET -Headers @"{Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'}) | ConvertFrom-Json).networks).id where {$_.name -match "public"})
-                $IP = (((Invoke-WebRequest -Uri "https://network.fr1.cloudwatt.com/v2.0/floatingips" -ContentType "application/json" -Method Post -Headers @"{Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'{"+'floatingip":{"floating_network_id":"'+$NetId+'"}}'+"'") | ConvertFrom-Json).floatingip).floating_ip_address
-                Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers/$ServerId/action" -ContentType "application/json" -Method Post -Headers @"{Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'{"+'addFloatingIp":{"address":"'+$IP+'"}}'+"'"
-            }      
-        }
-        elseif (((Import-Csv $file -Delimiter ";").Name) -match "Numergy") {
-            $Tbody = '{"auth": {"apiAccessKeyCredentials": {"accessKey": "'+$accessKey+'","secretKey": "'+$secretKey+'" },"tenantId": "'+$tenantid+'" } }'
-            $Token = (((((Invoke-WebRequest -Uri $Uri -ContentType "application/json; charset=utf-8" -Headers @{"X-Auth-Token" = '"'+$Token+'"'} -Method Post -Body $TBody) | ConvertFrom-Json).access).token).id)
-            foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
-                $Nversion = "V2.0";$TenantID = ((Import-Csv $file -Delimiter ";").Tenant)
-                $Uri = "https://api2.numergy.com/$Nversion/$TenantID/servers"
-                $ImageSet = Get-ImageId;$SizeSet = Get-Size=$Name = ((Import-Csv $file -Delimiter ";").Name)
-                $Body = '{"server": {"flavorRef": "'+$SizeSet+'","imageRef": "'+$ImageSet+'","name": "'+$Name+'"}}'
-                Invoke-WebRequest -Uri $Uri -ContentType "application/json; charset=utf-8" -Headers @{"X-Auth-Token" = '"'+$Token+'"'} -Method Post -Body $Body
-            }
-        }
-        elseif (((Import-Csv $file -Delimiter ";").Name) -match "OVH") {}
-        elseif (((Import-Csv $file -Delimiter ";").Name) -match "Arubacloud") {}
-        elseif (((Import-Csv $file -Delimiter ";").Name) -match "VMWare") {}
-        else{}
     }
 }
 ################### Code ########################
 Write-Host "PoSH Easy Deploy $version"
 $file = Read-Host "Fichier d'inventaire"
-Pacman
+PacMan
