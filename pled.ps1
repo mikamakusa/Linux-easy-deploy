@@ -161,9 +161,11 @@ function Get-Regions {
             }
         }
         "Google" {
-            "Asia" {return "asia-east1-a"}
-            "Europe" {return "europe-west1-b"}
-            "US" {return "us-central1-a"}
+            switch ($Region) {
+                "Asia" {return "asia-east1-a"}
+                "Europe" {return "europe-west1-b"}
+                "US" {return "us-central1-a"}
+            }
         }
     }
 }
@@ -284,7 +286,7 @@ function PacMan {
             switch ($Part) {
                 "Package" {
                     $packman = "apt-get","zypper","yum","urpmi","slackpkg","slapt-get","netpkg","equo","pacman","conary","apk add","emerge","lin","cast","niv-env","xpbs","snappy"
-                    foreach ($item in packman) {
+                    foreach ($item in $packman) {
                         if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$item").ExitStatus -notmatch "127")) {
                             foreach ($p in ((Import-Csv $file -Delimiter ";").Packages)) {
                                 $Action = (Import-Csv $file -Delimiter ";").Action
@@ -418,7 +420,7 @@ function PacMan {
                         $Token = ((Import-Csv $file -Delimiter ";").Token)
                         $Name = ((Import-Csv $file -Delimiter ";").Name)
                         $ImageSet = Get-ImageId;$RegionSet = Get-Regions;$SizeSet = Get-Size
-                        Invoke-WebRequest -Uri "https://api.digitalocean.com/v2/droplets" -ContentType "application/json" -Method Get -Headers @{'"Authorization" = "Bearer "'+$Token} -Body '{"name":"'+$Name+'","region":"'+$RegionSet+'","size:"'+$SizeSet+'","image":"'+$ImageSet+'","ssh_keys":null,"backups":false,"ipv6":true,"user_data":null,"private_networking":null}'  
+                        Invoke-WebRequest -Uri "https://api.digitalocean.com/v2/droplets" -ContentType "application/json" -Method Get -Headers @{"Authorization" = "Bearer $Token"} -Body '{"name":"'+$Name+'","region":"'+$RegionSet+'","size:"'+$SizeSet+'","image":"'+$ImageSet+'","ssh_keys":null,"backups":false,"ipv6":true,"user_data":null,"private_networking":null}'  
                     }
                 }
                 "Cloudwatt" {
