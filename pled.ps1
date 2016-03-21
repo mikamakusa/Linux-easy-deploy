@@ -125,6 +125,15 @@ function Get-ImageId {
                 "Windows 2012" {return "projects/windows-cloud/global/images/windows-server-2012-r2-dc-v20160224"}
             }
         }
+        "Rackspace" {
+            switch ($Image) {
+                "Debian" {return "a10eacf7-ac15-4225-b533-5744f1fe47c1"}
+                "CentOS" {return "c195ef3b-9195-4474-b6f7-16e5bd86acd0"}
+                "Suse" {return "096c55e5-39f3-48cf-a413-68d9377a3ab6"}
+                "Ubuntu" {return "5cebb13a-f783-4f8c-8058-c4182c724ccd"}
+                "Windows 2008" {return "b9ea8426-8f43-4224-a182-7cdb2bb897c8"}
+            }
+        }
         default {}
     }
 }
@@ -206,6 +215,15 @@ function Get-Size {
                 "us-central1-a" {return "https://content.googleapis.com/compute/v1/projects/intricate-reef-125710/zones/us-central1-a/machineTypes/f1-micro"}
             }
         }
+        "Rackspace" {
+            switch ($Size) {
+                "small" {return "3"}
+                "medium" {return "4"}
+                "large" {return "5"}
+                "xl" {return "6"}
+                "xxl" {return "7"}
+            }
+        }
         default{}
     }
 }
@@ -241,6 +259,13 @@ function Get-Token {
             $Accesskey = "SharedAccessSignature uid=$Identifier&ex=$Expiry.0000000Z&sn=$Key"
         }
         "Google" {
+        }
+        "Rackspace" {
+            $Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
+            $Username = ((Import-Csv -Delimiter ";").Username)
+            $Password = ((Import-Csv -Delimiter ";").Password)
+            $APIKey = ((Import-Csv -Delimiter ";").APIKey)
+            $Token = (((((Invoke-WebRequest -Uri "https://identity.api.rackspacecloud.com/v2.0/tokens" -ContentType "application/json" -Body "'"+'{"auth":{"RAX-KSKEY:apiKeyCredentials":{"username":"'+$Username+'","apiKey":"'+$apiKey+'"}}}'+"'") | ConvertFrom-Json).access).token).id)
         }
         default {}
     }   
@@ -417,10 +442,10 @@ function PacMan {
                         Invoke-WebRequest -Uri $Uri -ContentType "application/json; charset=utf-8" -Headers @{"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Post -Body $Body
                     }
                 }
-                "OVH" {
-                    $TokenSet = Get-Token;$time = Invoke-WebRequest -Uri "https://eu.api.ovh.com/1.0/auth/time"
-                    foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {}
-                }
+                ##"OVH" {
+                ##    $TokenSet = Get-Token;$time = Invoke-WebRequest -Uri "https://eu.api.ovh.com/1.0/auth/time"
+                ##    foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {}
+                ##}
                 "Arubacloud" {
                     $apiversion = "v2.8"
                     $Username = ((Import-Csv $file -Delimiter ";").Username);$Password = ((Import-Csv $file -Delimiter ";").Password)
@@ -433,17 +458,23 @@ function PacMan {
                         Invoke-WebRequest -Uri $uri -Method Post -ContentType "text/xml; charset=utf-8" -headers $headers -Body $SOAPBody
                     }
                 }
-                "Azure" {
-                    Get-Token
-                }
+                #"Azure" {Get-Token}
                 "Google" {
                     foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
                         $Zone = Get-Regions;$ImageSet=Get-ImageId;$Name = ((Import-Csv $file -Delimiter ";").Name);$Project = ((Import-Csv $file -Delimiter ";").Project)
-                        $SizeSet = Get-Size;$Name = ((Import-Csv $file -Delimiter ";").Name);$Key = ((Import-Csv $file -Delimiter ";").Key)
+                        $SizeSet = Get-Size;$Key = ((Import-Csv $file -Delimiter ";").Key)
                         $headers = "headers=@{'Content-Type': 'application/x-www-form-urlencoded'}"
                         $Body = '{'+'"name"'+': '+'"'+$Name+'"','"machineType"'+': '+'"'+$SizeSet+'"'+'"networkInterfaces"'+': [{'+'"accessConfigs"'+': [{'+'"type"'+': "ONE_TO_ONE_NAT",'+'"name"'+': "External NAT"'+'}],'+'"network"'+': "global/networks/default"'+'}],'+'"disks"'+': [{'+'"autoDelete"'+': "true",'+'"boot"'+': "true",'+'"type"'+': "PERSISTENT",'+'"initializeParams"'+': {'+'"sourceImage"'+': '+"$Image"+'}'+'}]'+'}'
                         $Uri = "https://www.googleapis.com/compute/v1/projects/$Project/zones/$Zone/instances?key=$Key"
                         Invoke-WebRequest -Uri $Uri -ContentType "application/json" -Headers $headers -Method POST -body $Body
+                    }
+                }
+                "Rackspace" {
+                    foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
+                        $ImageSet=Get-ImageId;$Name = ((Import-Csv $file -Delimiter ";").Name);$SizeSet = Get-Size;$TokenSet = Get-Token
+                        $Tenant = ((Import-Csv $file -Delimiter ";").Tenant);$Username = ((Import-Csv -Delimiter ";").Username);$Password = ((Import-Csv -Delimiter ";").Password)
+                        $APIKey = ((Import-Csv -Delimiter ";").APIKey)
+                        Invoke-WebRequest -Uri "https://servers.api.rackspacecloud.com/v1.0/010101/v2/$Tenant/servers" -Method Post -ContentType "application/json" -Headers @{"X-Auth-Token" = $TokenSet;"X-Auth-Project-Id" = $Name} -Body "'{"+'"server": {"name": "'+$Name+'","imageRef": "'+$ImageSet+'", "flavorRef": "'+$sizeSet+'"}}'+"'" 
                     }
                 }
                 default{}
