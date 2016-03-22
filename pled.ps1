@@ -1,5 +1,4 @@
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-#Add-Type -AssemblyName System.Net.ServicePointManager
 $version = "1.3"
 ## Import SSH Module
 if (Get-Command | Where {$_.Name -notmatch "New-SShSession"}){
@@ -145,7 +144,7 @@ function Get-Regions ($file) {
         "Digital Ocean" {
             switch ($Region) {
                 "New York" {return "nyc1"}
-                "Amsterdam" {return "ams1"}
+                "Amsterdam" {return "ams2"}
                 "San Francisco" {return "sfo1"}
                 "Singapore" {return "sgp1"}
                 "London" {return "lon1"}
@@ -212,10 +211,11 @@ function Get-Size ($file) {
         }
         "Google" {
             $Region = ((Import-Csv $file -Delimiter ";").Region)
+            $Project = ((Import-Csv $file -Delimiter ";").Project)
             switch ($Region) {
                 "asia-east1-a" {return "https://content.googleapis.com/compute/v1/projects/$Project/zones/asia-east1-a/machineTypes/f1-micro"}
                 "europe-west1-b" {return "https://content.googleapis.com/compute/v1/projects/$Project/zones/europe-west1-b/machineTypes/f1-micro"}
-                "us-central1-a" {return "https://content.googleapis.com/compute/v1/projects/intricate-reef-125710/zones/us-central1-a/machineTypes/f1-micro"}
+                "us-central1-a" {return "https://content.googleapis.com/compute/v1/projects/$Project/zones/us-central1-a/machineTypes/f1-micro"}
             }
         }
         "Rackspace" {
@@ -254,13 +254,6 @@ function Get-Token ($file) {
             $Uri = "https://eu.api.ovh.com/1.0/auth/credential"
             Invoke-WebRequest -Uri $Uri -ContentType "application/json" -Headers @{"X-Ovh-Application" = $AppKey} -Method Post -Body '{"accessRules":[{"method": "GET","path": "/*"}],"redirection":"https://www.mywebsite.com/"}'
         }
-        "Azure" {
-            $Identifier = ((Import-Csv $file -Delimiter ";").Identifier)
-            $APIid = ((Import-Csv $file -Delimiter ";").APIid)
-            $Date = ((Get-Date -Format "yyyy-MM-dd"));$hour = (((get-date).AddHours("1")).Hour);$minutes = ((get-date).Minute);$seconds = ((get-date).Second);$Expiry = $date+"T"+$hour+"-"+$minutes+"-"+$seconds
-            $Key = ((Import-Csv $file -Delimiter ";").Key)
-            $Accesskey = "SharedAccessSignature uid=$Identifier&ex=$Expiry.0000000Z&sn=$Key"
-        }
         "Google" {
         }
         "Rackspace" {
@@ -294,7 +287,7 @@ function PacMan {
                         switch ($Part) {
                             "Package" {
                                 $packman = "apt-get","zypper","yum","urpmi","slackpkg","slapt-get","netpkg","equo","pacman","conary","apk add","emerge","lin","cast","niv-env","xpbs","snappy"
-                                foreach ($item in packman) {
+                                foreach ($item in $packman) {
                                     if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$item").ExitStatus -notmatch "127")) {
                                         foreach ($p in ((Import-Csv $file -Delimiter ";").Packages)) {
                                             $Action = (Import-Csv $file -Delimiter ";").Action
@@ -486,7 +479,10 @@ function PacMan {
                                         }
                                     }
                                     "Skype" {
-                                        
+                                        Invoke-Command -Session $i -ScriptBlock {
+                                            "$Install NET-Framework-Core, RSAT-ADDS, Windows-Identity-Foundation, Web-Server, Web-Static-Content, Web-Default-Doc, Web-Http-Errors, Web-Dir-Browsing, Web-Asp-Net, Web-Net-Ext, Web-ISAPI-Ext, Web-ISAPI-Filter, Web-Http-Logging, Web-Log-Libraries, Web-Request-Monitor, Web-Http-Tracing, Web-Basic-Auth, Web-Windows-Auth, Web-Client-Auth, Web-Filtering, Web-Stat-Compression, Web-Dyn-Compression, NET-WCF-HTTP-Activation45, Web-Asp-Net45, Web-Mgmt-Tools, Web-Scripting-Tools, Web-Mgmt-Compat, Server-Media-Foundation, BITS"
+                                            "shutdown -r -t 0"
+                                        }
                                     }
                                 }
                             }
@@ -562,10 +558,6 @@ function PacMan {
                         Invoke-WebRequest -Uri $Uri -ContentType "application/json; charset=utf-8" -Headers @{"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Post -Body $Body
                     }
                 }
-                ##"OVH" {
-                ##    $TokenSet = Get-Token;$time = Invoke-WebRequest -Uri "https://eu.api.ovh.com/1.0/auth/time"
-                ##    foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {}
-                ##}
                 "Arubacloud" {
                     $apiversion = "v2.8"
                     $Username = ((Import-Csv $file -Delimiter ";").Username);$Password = ((Import-Csv $file -Delimiter ";").Password)
@@ -574,11 +566,11 @@ function PacMan {
                         #$Uri = "https://api.$dcx.computing.cloud.it/WsEndUser/$apiversion/WsEndUser.svc/soap11"
                         [xml]$SOAPBody = "<soap:Envelope xmlns:arub='http://schemas.datacontract.org/2004/07/Aruba.Cloud.Provisioning.Entities' xmlns:soap='http://www.w3.org/2003/05/soap-envelope' xmlns:wsen='https://api.computing.cloud.it/WsEndUser'><soap:Header><wsse:Security soap:mustUnderstand='true' xmlns:wsse='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd' xmlns:wsu='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'><wsse:UsernameToken wsu:Id='UsernameToken-D73AFF2E1B956DC7A7145854908826214'><wsse:Username>$Username</wsse:Username><wsse:Password Type='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText'>$Password</wsse:Password><wsse:Nonce EncodingType='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'>8vRx/zg0wCriFAUUPLcYdw==</wsse:Nonce><wsu:Created>2016-03-21T08:31:28.262Z</wsu:Created></wsse:UsernameToken></wsse:Security></soap:Header><soap:Body><wsen:SetEnqueueServerCreation><wsen:server><arub:AdministratorPassword>$AdminPass</arub:AdministratorPassword><arub:Name>$Name</arub:Name><arub:OSTemplateId>$ImageSet</arub:OSTemplateId><arub:SmartVMWarePackageID>$SizeSet</arub:SmartVMWarePackageID></wsen:server></wsen:SetEnqueueServerCreation></soap:Body></soap:Envelope>"
                         $headers = @{"SOAPAction" = "https://api.computing.cloud.it/WsEndUser/IWsEndUser/SetEnqueueServerCreation"}
-                        #[System.Net.ServicPointManager]::ServerCertificateValidationCallback = $null
+                        New-Object System.Net.WebClient 
+                        [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$false}
                         Invoke-WebRequest -Uri https://api.$dcx.computing.cloud.it/WsEndUser/$apiversion/WsEndUser.svc/soap11 -Method Post -ContentType "text/xml; charset=utf-8" -headers $headers -Body $SOAPBody
                     }
                 }
-                #"Azure" {Get-Token}
                 "Google" {
                     foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
                         $Zone = Get-Regions -file $file;$ImageSet=Get-ImageId -file $file;$Name = ((Import-Csv $file -Delimiter ";").Name);$Project = ((Import-Csv $file -Delimiter ";").Project)
