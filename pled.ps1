@@ -272,131 +272,247 @@ function Get-Token {
         default {}
     }   
 }
+function Win_Role_Deploy {
+    if ((Get-WMIObject -Class Win32_OperatingSystem).Caption -match "Windows 2008") {return "Add-WindowsFeature"}
+    else {return "Install-WindowsFeature"}
+}
 ## Main function
 function PacMan {
     $Type = ((Import-Csv $file -Delimiter ";").Type)
     switch ($Type) {
         "Host" {
-            foreach ($i in (Import-Csv -Delimiter ";").Name) {
-            $username = (Import-Csv -Delimiter ";").Username
-            $password = ConvertTo-SecureString ((Import-Csv $file -Delimiter ";").Password) -AsPlainText -Force
-            $credentials = New-Object System.Management.Automation.PSCredential($username,$password)
-            New-SSHSession -ComputerName $i -Port ((Import-Csv $file -Delimiter ";").Port) -Credential $credentials
-            $Part = ((Import-Csv $file -Delimiter ";").Part)
-            switch ($Part) {
-                "Package" {
-                    $packman = "apt-get","zypper","yum","urpmi","slackpkg","slapt-get","netpkg","equo","pacman","conary","apk add","emerge","lin","cast","niv-env","xpbs","snappy"
-                    foreach ($item in $packman) {
-                        if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$item").ExitStatus -notmatch "127")) {
-                            foreach ($p in ((Import-Csv $file -Delimiter ";").Packages)) {
-                                $Action = (Import-Csv $file -Delimiter ";").Action
-                                switch ($Action) {
-                                    "Install" {
-                                        if ($item -match "apt-get" -or "zypper" -or "yum" -or "slackpkg" -or "equo" -or "snappy") {return $item+" install -y "+$p}
-                                        elseif ($item -match "slapt-get") {return $item+" --install -y "+$p}
-                                        elseif ($item -match "pacman") {return $item+" -S "+$p}
-                                        elseif ($item -match "conary") {return $item+" update "+$p}
-                                        elseif ($item -match "apk") {return $item+" add "+$p}
-                                        elseif ($item -match "nix-env") {return $item+" -i "+$p}
-                                        elseif ($item -match "xpbs") {return $item+"-install "+$p}
-                                        else {return $item+" "+$p}
+            $OS = ((Import-Csv $file -Delimiter ";").OS)
+            switch ($OS) {
+                "linux" {
+                    foreach ($i in (Import-Csv $file -Delimiter ";").Name) {
+                        $username = (Import-Csv $file -Delimiter ";").Username
+                        $password = ConvertTo-SecureString ((Import-Csv $file -Delimiter ";").Password) -AsPlainText -Force
+                        $credentials = New-Object System.Management.Automation.PSCredential($username,$password)
+                        New-SSHSession -ComputerName $i -Port ((Import-Csv $file -Delimiter ";").Port) -Credential $credentials
+                        $Part = ((Import-Csv $file -Delimiter ";").Part)
+                        switch ($Part) {
+                            "Package" {
+                                $packman = "apt-get","zypper","yum","urpmi","slackpkg","slapt-get","netpkg","equo","pacman","conary","apk add","emerge","lin","cast","niv-env","xpbs","snappy"
+                                foreach ($item in packman) {
+                                    if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$item").ExitStatus -notmatch "127")) {
+                                        foreach ($p in ((Import-Csv $file -Delimiter ";").Packages)) {
+                                            $Action = (Import-Csv $file -Delimiter ";").Action
+                                            switch ($Action) {
+                                                "Install" {
+                                                    if ($item -match "apt-get" -or "zypper" -or "yum" -or "slackpkg" -or "equo" -or "snappy") {return $item+" install -y "+$p}
+                                                    elseif ($item -match "slapt-get") {return $item+" --install -y "+$p}
+                                                    elseif ($item -match "pacman") {return $item+" -S "+$p}
+                                                    elseif ($item -match "conary") {return $item+" update "+$p}
+                                                    elseif ($item -match "apk") {return $item+" add "+$p}
+                                                    elseif ($item -match "nix-env") {return $item+" -i "+$p}
+                                                    elseif ($item -match "xpbs") {return $item+"-install "+$p}
+                                                    else {return $item+" "+$p}
+                                                }
+                                                "Remove" {
+                                                    if ($item -match "apt-get"-or "zypper" -or "slackpkg" -or "equo" -or "snappy" -or "netpkg") {return $item+" remove -y "+$p}
+                                                    elseif ($item -match "yum" -or "conary") {return $item+" erase -y "+$p}
+                                                    elseif ($item -match "slapt-get") {return $item+" --remove -y "+$p}
+                                                    elseif ($item -match "urpmi") {return "urpme "+$p}
+                                                    elseif ($item -match "pacman") {return $item+" -R "+$p}
+                                                    elseif ($item -match "apk") {return $item+" del "+$p}
+                                                    elseif ($item -match "emerge") {return $item+" -aC "+$p}
+                                                    elseif ($item -match "lin") {return "lrm "+$p}
+                                                    elseif ($item -match "cast") {return "dispel "+$p}
+                                                    elseif ($item -match "nix-env") {return $item+" -e "+$p}
+                                                    elseif ($item -match "xpbs") {return $item+"-remove "+$p}
+                                                    else {}
+                                                }
+                                                "Search" {
+                                                    if ($item -match "apt-get") {return "apt-cache "+$p}
+                                                    elseif ($item -match "zypper") {return $item+" search -t pattern "+$p}
+                                                    elseif ($item -match "yum" -or "equo" -or "slackpkg" -or "apk" -or "snappy") {return $item+"search "+$p}
+                                                    elseif ($item -match "urpmi") {return "urpmq -fuzzy "+$p}
+                                                    elseif ($item -match "netpkg") {return $item+"list | grep "+$p}
+                                                    elseif ($item -match "conary") {return $item+" query "+$p}
+                                                    elseif ($item -match "Pacman") {return $item+" -S "+$p}
+                                                    elseif ($item -match "emerge") {return $item+" --search "+$p}
+                                                    elseif ($item -match "lin") {return "lvu search "+$p}
+                                                    elseif ($item -match "cast") {return "gaze search "+$p}
+                                                    elseif ($item -match "nix-env") {return " -qa "+$p}
+                                                    else {return "xbps-query -Rs "+$p}
+                                                }
+                                                "UpSystem" {
+                                                    if ($item -match "zypper" -or "yum" -or "snappy") {return $item+" update -y"}
+                                                    elseif ($item -match "apt" -or "netpkg" -or "equo" -or "apk" ) {return $item+" upgrade -y"}
+                                                    elseif ($item -match "urpmi") {return $item+" --auto-select"}
+                                                    elseif ($item -match "slapt-get") {return $item+" --upgrade"}
+                                                    elseif ($item -match "slackpkg") {return $item+" upgrade-all"}
+                                                    elseif ($item -match "pacman") {return $item+" -Su"}
+                                                    elseif ($item -match "conary") {return $item+" updateall"}
+                                                    elseif ($item -match "emerge") {return $item+" -NuDa world"}
+                                                    elseif ($item -match "lin") {return "lunar update"}
+                                                    elseif ($item -match "cast") {return "sorcery upgrade"}
+                                                    elseif ($item -match "nix-env") {return "-u"}
+                                                    else {return "xbps-install -u"}
+                                                }
+                                                "UpPackage" {
+                                                    if ($item -match "zypper") {return $item+" refresh -y "+$p}
+                                                    elseif ($item -match "yum") {return $item+" check-update "+$p}
+                                                    elseif ($item -match "apt" -or "equo" -or "apk" -or "slackpkg") {return $item+" update -y "+$p}
+                                                    elseif ($item -match "urpmi") {return $item+".update -a "+$p}
+                                                    elseif ($item -match "slapt-get") {return $item+" --update "+$p}
+                                                    elseif ($item -match "pacman") {return $item+" -Sy "+$p}
+                                                    elseif ($item -match "emerge") {return $item+" --sync "+$p}
+                                                    elseif ($item -match "lin") {return "lin moonbase "+$p}
+                                                    elseif ($item -match "cast") {return "scribe update "+$p}
+                                                    elseif ($item -match "nix-env") {return "nix-channel --update "+$p}
+                                                    else {return "xbps-install -u "+$p}
+                                                }
+                                                default {return "Erreur - Commande inconnue ou non reférencée"}
+                                            }
+                                        }
                                     }
-                                    "Remove" {
-                                        if ($item -match "apt-get"-or "zypper" -or "slackpkg" -or "equo" -or "snappy" -or "netpkg") {return $item+" remove -y "+$p}
-                                        elseif ($item -match "yum" -or "conary") {return $item+" erase -y "+$p}
-                                        elseif ($item -match "slapt-get") {return $item+" --remove -y "+$p}
-                                        elseif ($item -match "urpmi") {return "urpme "+$p}
-                                        elseif ($item -match "pacman") {return $item+" -R "+$p}
-                                        elseif ($item -match "apk") {return $item+" del "+$p}
-                                        elseif ($item -match "emerge") {return $item+" -aC "+$p}
-                                        elseif ($item -match "lin") {return "lrm "+$p}
-                                        elseif ($item -match "cast") {return "dispel "+$p}
-                                        elseif ($item -match "nix-env") {return $item+" -e "+$p}
-                                        elseif ($item -match "xpbs") {return $item+"-remove "+$p}
-                                        else {}
-                                    }
-                                    "Search" {
-                                        if ($item -match "apt-get") {return "apt-cache "+$p}
-                                        elseif ($item -match "zypper") {return $item+" search -t pattern "+$p}
-                                        elseif ($item -match "yum" -or "equo" -or "slackpkg" -or "apk" -or "snappy") {return $item+"search "+$p}
-                                        elseif ($item -match "urpmi") {return "urpmq -fuzzy "+$p}
-                                        elseif ($item -match "netpkg") {return $item+"list | grep "+$p}
-                                        elseif ($item -match "conary") {return $item+" query "+$p}
-                                        elseif ($item -match "Pacman") {return $item+" -S "+$p}
-                                        elseif ($item -match "emerge") {return $item+" --search "+$p}
-                                        elseif ($item -match "lin") {return "lvu search "+$p}
-                                        elseif ($item -match "cast") {return "gaze search "+$p}
-                                        elseif ($item -match "nix-env") {return " -qa "+$p}
-                                        else {return "xbps-query -Rs "+$p}
-                                    }
-                                    "UpSystem" {
-                                        if ($item -match "zypper" -or "yum" -or "snappy") {return $item+" update -y"}
-                                        elseif ($item -match "apt" -or "netpkg" -or "equo" -or "apk" ) {return $item+" upgrade -y"}
-                                        elseif ($item -match "urpmi") {return $item+" --auto-select"}
-                                        elseif ($item -match "slapt-get") {return $item+" --upgrade"}
-                                        elseif ($item -match "slackpkg") {return $item+" upgrade-all"}
-                                        elseif ($item -match "pacman") {return $item+" -Su"}
-                                        elseif ($item -match "conary") {return $item+" updateall"}
-                                        elseif ($item -match "emerge") {return $item+" -NuDa world"}
-                                        elseif ($item -match "lin") {return "lunar update"}
-                                        elseif ($item -match "cast") {return "sorcery upgrade"}
-                                        elseif ($item -match "nix-env") {return "-u"}
-                                        else {return "xbps-install -u"}
-                                    }
-                                    "UpPackage" {
-                                        if ($item -match "zypper") {return $item+" refresh -y "+$p}
-                                        elseif ($item -match "yum") {return $item+" check-update "+$p}
-                                        elseif ($item -match "apt" -or "equo" -or "apk" -or "slackpkg") {return $item+" update -y "+$p}
-                                        elseif ($item -match "urpmi") {return $item+".update -a "+$p}
-                                        elseif ($item -match "slapt-get") {return $item+" --update "+$p}
-                                        elseif ($item -match "pacman") {return $item+" -Sy "+$p}
-                                        elseif ($item -match "emerge") {return $item+" --sync "+$p}
-                                        elseif ($item -match "lin") {return "lin moonbase "+$p}
-                                        elseif ($item -match "cast") {return "scribe update "+$p}
-                                        elseif ($item -match "nix-env") {return "nix-channel --update "+$p}
-                                        else {return "xbps-install -u "+$p}
-                                    }
-                                    default {return "Erreur - Commande inconnue ou non reférencée"}
                                 }
                             }
+                            "Docker" {
+                                if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker").ExitStatus -notmatch "127")) {          
+                                    $Action = (Import-Csv $file -Delimiter ";").Action
+                                    switch ($Action) {
+                                        "Deploy"{
+                                            $Image = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Image)){}else{((Import-Csv $file -Delimiter ";").Image)} 
+                                            $Mode = if (((Import-Csv $file -Delimiter ";").Mode) -match "daemon"){"-dit"}else{"-a=['STDIN'] -a=['STDOUT'] -a=['STDERR']"}
+                                            $CName = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").CName)){}else{"--name "+((Import-Csv $file -Delimiter ";").CName)}
+                                            $Network = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Network)){}else{"--net="+'"'+((Import-Csv $file -Delimiter ";").Network)+'"'}
+                                            $AddHost = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").AddHost)){}else{"--add-hosts "+((Import-Csv $file -Delimiter ";").AddHost)}
+                                            $DNS = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").DNS)){}else{"--dns=["+((Import-Csv $file -Delimiter ";").DNS)+']'}
+                                            $Restart = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").RestartPolicies)){}else{"--restart="+((Import-Csv $file -Delimiter ";").RestartPolicies)}
+                                            $EnPoint = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").EntryPoint)){}else{"--entrypoint="+((Import-Csv $file -Delimiter ";").EntryPoint)}
+                                            $CMD = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").CMD)){}else{"--restart="+((Import-Csv $file -Delimiter ";").CMD)}
+                                            $PExpose =  if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").PortsExpose)){}else{"--expose=["+((Import-Csv $file -Delimiter ";").PortsExpose)+']'}
+                                            $PPublish = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").PortsPublish)){}else{"-P=["+((Import-Csv $file -Delimiter ";").PortsPublish)+']'}
+                                            $Volume = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Volumes)){}else{"-v "+((Import-Csv $file -Delimiter ";").Volumes)}
+                                            $Link = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Links)){}else{"--link "+((Import-Csv $file -Delimiter ";").Links)}
+                                            Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker run" $Restart $Mode $PExpose $PPublish $AddHost $Network $DNS $CName $Link $Volume $EnPoint $Image $CMD
+                                        }
+                                        "Build" {
+                                            Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "Docker Build -t "+((Import-Csv $file -Delimiter ";").IName)+" ."
+                                        }
+                                        "Stop" {
+                                            Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker stop "+((Import-Csv $file -Delimiter ";").CId)
+                                        }
+                                        "Remove" {
+                                            Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker rm "+((Import-Csv $file -Delimiter ";").CId)
+                                        }
+                                    }
+                                }
+                                else {(Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "curl -sSL https://get.docker.com/ | sh")}
+                            }
+                            #"Firewall" {}
+                            default {}
                         }
                     }
                 }
-                "Docker" {
-                    if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker").ExitStatus -notmatch "127")) {          
-                        $Action = (Import-Csv $file -Delimiter ";").Action
-                        switch ($Action) {
-                            "Deploy"{
-                                $Image = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Image)){}else{((Import-Csv $file -Delimiter ";").Image)} 
-                                $Mode = if (((Import-Csv $file -Delimiter ";").Mode) -match "daemon"){"-dit"}else{"-a=['STDIN'] -a=['STDOUT'] -a=['STDERR']"}
-                                $CName = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").CName)){}else{"--name "+((Import-Csv $file -Delimiter ";").CName)}
-                                $Network = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Network)){}else{"--net="+'"'+((Import-Csv $file -Delimiter ";").Network)+'"'}
-                                $AddHost = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").AddHost)){}else{"--add-hosts "+((Import-Csv $file -Delimiter ";").AddHost)}
-                                $DNS = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").DNS)){}else{"--dns=["+((Import-Csv $file -Delimiter ";").DNS)+']'}
-                                $Restart = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").RestartPolicies)){}else{"--restart="+((Import-Csv $file -Delimiter ";").RestartPolicies)}
-                                $EnPoint = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").EntryPoint)){}else{"--entrypoint="+((Import-Csv $file -Delimiter ";").EntryPoint)}
-                                $CMD = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").CMD)){}else{"--restart="+((Import-Csv $file -Delimiter ";").CMD)}
-                                $PExpose =  if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").PortsExpose)){}else{"--expose=["+((Import-Csv $file -Delimiter ";").PortsExpose)+']'}
-                                $PPublish = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").PortsPublish)){}else{"-P=["+((Import-Csv $file -Delimiter ";").PortsPublish)+']'}
-                                $Volume = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Volumes)){}else{"-v "+((Import-Csv $file -Delimiter ";").Volumes)}
-                                $Link = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Links)){}else{"--link "+((Import-Csv $file -Delimiter ";").Links)}
-                                Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker run" $Restart $Mode $PExpose $PPublish $AddHost $Network $DNS $CName $Link $Volume $EnPoint $Image $CMD
+                "Windows" {
+                    foreach ($i in (Import-Csv $file -Delimiter ";").Name) {
+                        $Username = (Import-Csv $file -Delimiter ";").Username
+                        $Password = ConvertTo-SecureString ((Import-Csv $file -Delimiter ";").Password) -AsPlainText -Force
+                        $credentials = New-Object System.Management.Automation.PSCredential($Username,$Password)
+                        EnterPSSession -ComputerName $i -Credentials $credentials
+                        $Part = ((Import-Csv $file -Delimiter ";").Part)
+                        switch ($Part) {
+                            "Roles" {
+                                $Role = ((Import-Csv $file -Delimiter ";").Role)
+                                $Install = Win_Role_Deploy
+                                switch ($Role) {
+                                    "Domain" {
+                                        Invoke-Command -Session $i -ScriptBlock {
+                                            $Install -Name AD-domain-Services -IncludeAllSubFeatures -IncludeManagementTools
+                                        }
+                                    }
+                                    "Certificate" {
+                                        Invoke-Command -Session $i -ScriptBlock {
+                                            $Install -Name AD-Certificate -IncludeAllSubfeatures -IncludeManagementTools
+                                        }
+                                    }
+                                    "Federation" {
+                                        Invoke-Command -Session $i -ScriptBlock {
+                                            $Install -Name AD-Federation-Services -IncludeAllSubfeatures -IncludeManagementTools
+                                        }
+                                    }
+                                    "Application Server" {
+                                        Invoke-Command -Session $i -ScriptBlock {
+                                            $Install -Name Application-Server -IncludeAllSubfeatures -IncludeManagementTools
+                                        }
+                                    }
+                                    "Network" {
+                                        Invoke-Command -Session $i -ScriptBlock {
+                                            $Install -Name NPAS -IncludeAllSubfeatures -IncludeManagementTools
+                                        }
+                                    }
+                                    "Print" {
+                                        Invoke-Command -Session $i -ScriptBlock {
+                                            $Install -Name Print-Services -IncludeAllSubfeatures -IncludeManagementTools
+                                        }
+                                    }
+                                    "Remote" {
+                                        Invoke-Command -Session $i -ScriptBlock {
+                                            $Install -Name Remote-Desktop-Services -IncludeAllSubfeatures -IncludeManagementTools
+                                        }
+                                    }
+                                    "Deployment" {
+                                        Invoke-Command -Session $i -ScriptBlock {
+                                            $Install -Name WDS -IncludeAllSubfeatures -IncludeManagementTools
+                                        }
+                                    }
+                                    "Web Server" {
+                                        Invoke-Command -Session $i -ScriptBlock {
+                                            $Install -Name Web-Server -IncludeAllSubFeature -IncludeManagementTools
+                                        }
+                                    }
+                                    default {}
+                                }
                             }
-                            "Build" {
-                                Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "Docker Build -t "+((Import-Csv $file -Delimiter ";").IName)+" ."
+                            "Softwares" {
+                                $SName = ((Import-Csv $file -Delimiter ";").SName)
+                                switch ($SName) {
+                                    "Exchange" {
+                                        Invoke-Command -Session $i -ScriptBlock {
+                                            Import-Module ServerManager
+                                            $Install Desktop-Experience, NET-Framework, NET-HTTP-Activation, RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Web-Server, WAS-Process-Model, Web-Asp-Net, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth, Web-Dir-Browsing, Web-Dyn-Compression, Web-Http-Errors, Web-Http-Logging, Web-Http-Redirect, Web-Http-Tracing, Web-ISAPI-Ext, Web-ISAPI-Filter, Web-Lgcy-Mgmt-Console, Web-Metabase, Web-Mgmt-Console, Web-Mgmt-Service, Web-Net-Ext, Web-Request-Monitor, Web-Server, Web-Stat-Compression, Web-Static-Content, Web-Windows-Auth, Web-WMI
+                                            Shutdown -r -t 0 
+                                        }
+                                    }
+                                    "Sharepoint" {
+                                        Invoke-Command -Session $i -ScriptBlock {
+                                            Import-Module ServerManager
+                                            $Install -Name Application-Server,Web-Server -IncludeAllSubFeatures -IncludeManagementTools
+                                            Shutdown -r -t 0
+                                        }
+                                    }
+                                    "Skype" {
+                                        
+                                    }
+                                }
                             }
-                            "Stop" {
-                                Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker stop "+((Import-Csv $file -Delimiter ";").CId)
+                            "Containers" {
+                                if ((Get-WmiObject -Class Win32_OperatingSystem).Caption -match "Windows 2016") {
+                                    Install-PackageProvider ContainerProvider -Force
+                                    if ((Find-ContainerImage) -notmatch "NanoServer" -or "WindowsServerCore") {
+                                        Install-ContainerImage -Name NanoServer
+                                        Install-ContainerImage -Name WindowsServerCore
+                                    }
+                                    if ((Get-NetIPConfiguration).Name -notmatch "Virtual Switch") {
+                                        New-VMSwitch -Name "Virtual Switch" -SwitchType NAT -NATSubnetAddress 172.16.0.0/12
+                                        New-NetNat -Name ContainerNat -InternalIPInterfaceAddressPrefix "172.16.0.0/12"
+                                    }
+                                    foreach ($item in ((Import-Csv $file -Delimiter ";").CName)) {
+                                        $CName = ((Import-Csv $file -Delimiter ";").CName)
+                                        $CImage = ((Import-Csv $file -Delimiter ";").CImage)
+                                        New-Container -Name $CName -ContainerImageName $CImage -SwitchName "Virtual Switch"
+                                        Start-Container -Name $Cname
+                                    }
+                                }
+                                else {return "Feature unavailable"}
                             }
-                            "Remove" {
-                                Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker rm "+((Import-Csv $file -Delimiter ";").CId)
-                            }
+                            "Firewall" {}
+                            default {}
                         }
                     }
-                    else {(Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "curl -sSL https://get.docker.com/ | sh")}
-                }
-                #"Firewall" {}
-                default {}
                 }
             }
         }
