@@ -1,4 +1,5 @@
 Add-Type -AssemblyName System.IO.Compression.FileSystem
+#Add-Type -AssemblyName System.Net.ServicePointManager
 $version = "1.3"
 ## Import SSH Module
 if (Get-Command | Where {$_.Name -notmatch "New-SShSession"}){
@@ -62,7 +63,7 @@ function Check_AWS_tools{
         }
     }
 }
-function Get-ImageId {
+function Get-ImageId ($file){
     $Image = ((Import-Csv $file -Delimiter ";").Image)
     $Name = ((Import-Csv $file -Delimiter ";").Name)
     switch ($Name) {
@@ -137,7 +138,7 @@ function Get-ImageId {
         default {}
     }
 }
-function Get-Regions {
+function Get-Regions ($file) {
     $Region = ((Import-Csv $file -Delimiter ";").Region)
     $Name = ((Import-Csv $file -Delimiter ";").Name)
     switch ($Name) {
@@ -169,7 +170,7 @@ function Get-Regions {
         }
     }
 }
-function Get-Size {
+function Get-Size ($file) {
     $Size = ((Import-Csv $file -Delimiter ";").Size)
     $Name = ((Import-Csv $file -Delimiter ";").Name)
     switch ($Name) {
@@ -229,7 +230,7 @@ function Get-Size {
         default{}
     }
 }
-function Get-Token {
+function Get-Token ($file) {
     $Name = ((Import-Csv $file -Delimiter ";").Name)
     switch ($Name) {
         "Cloudwatt" {
@@ -421,47 +422,47 @@ function PacMan {
                                 switch ($Role) {
                                     "Domain" {
                                         Invoke-Command -Session $i -ScriptBlock {
-                                            $Install -Name AD-domain-Services -IncludeAllSubFeatures -IncludeManagementTools
+                                            "$Install -Name AD-domain-Services -IncludeAllSubFeatures -IncludeManagementTools"
                                         }
                                     }
                                     "Certificate" {
                                         Invoke-Command -Session $i -ScriptBlock {
-                                            $Install -Name AD-Certificate -IncludeAllSubfeatures -IncludeManagementTools
+                                            "$Install -Name AD-Certificate -IncludeAllSubfeatures -IncludeManagementTools"
                                         }
                                     }
                                     "Federation" {
                                         Invoke-Command -Session $i -ScriptBlock {
-                                            $Install -Name AD-Federation-Services -IncludeAllSubfeatures -IncludeManagementTools
+                                            "$Install -Name AD-Federation-Services -IncludeAllSubfeatures -IncludeManagementTools"
                                         }
                                     }
                                     "Application Server" {
                                         Invoke-Command -Session $i -ScriptBlock {
-                                            $Install -Name Application-Server -IncludeAllSubfeatures -IncludeManagementTools
+                                            "$Install -Name Application-Server -IncludeAllSubfeatures -IncludeManagementTools"
                                         }
                                     }
                                     "Network" {
                                         Invoke-Command -Session $i -ScriptBlock {
-                                            $Install -Name NPAS -IncludeAllSubfeatures -IncludeManagementTools
+                                            "$Install -Name NPAS -IncludeAllSubfeatures -IncludeManagementTools"
                                         }
                                     }
                                     "Print" {
                                         Invoke-Command -Session $i -ScriptBlock {
-                                            $Install -Name Print-Services -IncludeAllSubfeatures -IncludeManagementTools
+                                            "$Install -Name Print-Services -IncludeAllSubfeatures -IncludeManagementTools"
                                         }
                                     }
                                     "Remote" {
                                         Invoke-Command -Session $i -ScriptBlock {
-                                            $Install -Name Remote-Desktop-Services -IncludeAllSubfeatures -IncludeManagementTools
+                                            "$Install -Name Remote-Desktop-Services -IncludeAllSubfeatures -IncludeManagementTools"
                                         }
                                     }
                                     "Deployment" {
                                         Invoke-Command -Session $i -ScriptBlock {
-                                            $Install -Name WDS -IncludeAllSubfeatures -IncludeManagementTools
+                                            "$Install -Name WDS -IncludeAllSubfeatures -IncludeManagementTools"
                                         }
                                     }
                                     "Web Server" {
                                         Invoke-Command -Session $i -ScriptBlock {
-                                            $Install -Name Web-Server -IncludeAllSubFeature -IncludeManagementTools
+                                            "$Install -Name Web-Server -IncludeAllSubFeature -IncludeManagementTools"
                                         }
                                     }
                                     default {}
@@ -473,15 +474,15 @@ function PacMan {
                                     "Exchange" {
                                         Invoke-Command -Session $i -ScriptBlock {
                                             Import-Module ServerManager
-                                            $Install Desktop-Experience, NET-Framework, NET-HTTP-Activation, RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Web-Server, WAS-Process-Model, Web-Asp-Net, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth, Web-Dir-Browsing, Web-Dyn-Compression, Web-Http-Errors, Web-Http-Logging, Web-Http-Redirect, Web-Http-Tracing, Web-ISAPI-Ext, Web-ISAPI-Filter, Web-Lgcy-Mgmt-Console, Web-Metabase, Web-Mgmt-Console, Web-Mgmt-Service, Web-Net-Ext, Web-Request-Monitor, Web-Server, Web-Stat-Compression, Web-Static-Content, Web-Windows-Auth, Web-WMI
-                                            Shutdown -r -t 0 
+                                            "$Install Desktop-Experience, NET-Framework, NET-HTTP-Activation, RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Web-Server, WAS-Process-Model, Web-Asp-Net, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth, Web-Dir-Browsing, Web-Dyn-Compression, Web-Http-Errors, Web-Http-Logging, Web-Http-Redirect, Web-Http-Tracing, Web-ISAPI-Ext, Web-ISAPI-Filter, Web-Lgcy-Mgmt-Console, Web-Metabase, Web-Mgmt-Console, Web-Mgmt-Service, Web-Net-Ext, Web-Request-Monitor, Web-Server, Web-Stat-Compression, Web-Static-Content, Web-Windows-Auth, Web-WMI"
+                                            "Shutdown -r -t 0" 
                                         }
                                     }
                                     "Sharepoint" {
                                         Invoke-Command -Session $i -ScriptBlock {
-                                            Import-Module ServerManager
-                                            $Install -Name Application-Server,Web-Server -IncludeAllSubFeatures -IncludeManagementTools
-                                            Shutdown -r -t 0
+                                            "Import-Module ServerManager"
+                                            "$Install -Name Application-Server,Web-Server -IncludeAllSubFeatures -IncludeManagementTools"
+                                            "Shutdown -r -t 0"
                                         }
                                     }
                                     "Skype" {
@@ -523,7 +524,7 @@ function PacMan {
                     Check_AWS_tools
                     if (((Get-WmiObject -Class Win32_OperatingSystem).Caption -match "Windows 2012") -or (((Get-WmiObject -Class Win32_OperatingSystem).Caption -match "Windows 2008") -and (($Host).Version).Major -match "4")) {
                         foreach ($item in ((Import-Csv $file -Delimiter ";").InstanceTag)) {
-                            $ImageSet = Get-ImageId
+                            $ImageSet = Get-ImageId -file $file
                             $AWSKey = New-EC2KeyPair -KeyName ((Import-Csv $file -Delimiter ";").Key)
                             $SGroup = New-EC2SecurityGroup -GroupName ((Import-Csv $file -Delimiter ";").SGroup)
                             New-EC2Instance -ImageId $Image -KeyName $AWSKey -SecurityGroupId $SGroup
@@ -532,30 +533,31 @@ function PacMan {
                     else {}
                 }
                 "DigitalOcean" { 
-                    foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
+                    foreach ($item in ((Import-Csv $file -Delimiter ";").VMName)) {
                         $Token = ((Import-Csv $file -Delimiter ";").Token)
-                        $Name = ((Import-Csv $file -Delimiter ";").Name)
-                        $ImageSet = Get-ImageId;$RegionSet = Get-Regions;$SizeSet = Get-Size
-                        Invoke-WebRequest -Uri "https://api.digitalocean.com/v2/droplets" -ContentType "application/json" -Method Get -Headers @{"Authorization" = "Bearer $Token"} -Body '{"name":"'+$Name+'","region":"'+$RegionSet+'","size:"'+$SizeSet+'","image":"'+$ImageSet+'","ssh_keys":null,"backups":false,"ipv6":true,"user_data":null,"private_networking":null}'  
+                        $VMName = ((Import-Csv $file -Delimiter ";").VMName)
+                        $ImageSet = Get-ImageId -file $file;$RegionSet = Get-Regions -file $file;$SizeSet = Get-Size -file $file
+                        [string]$Body = "'"+'{"name":"'+$VMName+'"'+","+'"region":"'+$RegionSet+'"'+","+'"size":"'+$SizeSet+'"'+","+'"image":"'+$ImageSet+'"'+","+'"ssh_keys":null,"backups":false,"ipv6":true,"user_data":null,"private_networking":null}'+"'"
+                        Invoke-WebRequest -Uri https://api.digitalocean.com/v2/droplets -ContentType "application/json" -Method Get -Headers @{"Authorization" = "Bearer $Token"} -Body $Body  
                     }
                 }
                 "Cloudwatt" {
                     foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
-                        $TokenSet = CW-GetToken; $ImageSet = Get-ImageId; $SizeSet = Get-Size;$Name = ((Import-Csv $file -Delimiter ";").Name);$Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
+                        $TokenSet = Get-Token -file $file; $ImageSet = Get-ImageId -file $file; $SizeSet = Get-Size -file $file;$Name = ((Import-Csv $file -Delimiter ";").Name);$Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
                         [xml]$InsCreate = "<?xml version='1.0' encoding='UTF-8'?><server xmlns='http://docs.openstack.org/compute/api/v1.1' imageRef='$ImageSet' flavorRef='$SizeSet' name='$Name'></server>" 
                         Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers" -Method Post -ContentType "application/json" -Headers @{"Accept" = "application/json";"X-Auth-Token"= "$Token"}
                         $ServerId = ((Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers" -Method Post -ContentType "application/json" -Headers @{"Accept" = "application/json";"X-Auth-Token"= "$Token"} -Body $InsCreate | ConvertFrom-Json).server).id
                         $NetId = ((((Invoke-WebRequest -Uri "https://network.fr1.cloudwatt.com/v2/networks" -ContentType "application/json" -Method GET -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'}) | ConvertFrom-Json).networks).id | where {$_.name -match "public"})
                         $IP = (((Invoke-WebRequest -Uri "https://network.fr1.cloudwatt.com/v2/floatingips" -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'"+"{"+"floatingip"+':'+'{'+'"'+"floating_network_id"+'"'+':'+'"'+$NetId+'"}}'+"'" | ConvertFrom-Json).floatingip).floating_ip_address)
-                        Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers/$ServerId/action" -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'{"+'addFloatingIp":{"address":"'+$IP+'"}}'+"'"
+                        Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/v2/$Tenant/servers/$ServerId/action -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'{"+'addFloatingIp":{"address":"'+$IP+'"}}'+"'"
                     }      
                 }
                 "Numergy" {
                     $Nversion = ((Invoke-WebRequest -Uri "https://api2.numergy.com/" -ContentType "application/json; charset=utf-8" -Method Get | ConvertFrom-Json).versions | select -Property id,status -Last 1).id
                     $TokenSet = Get-Token;$TenantID = ((Import-Csv $file -Delimiter ";").Tenant)
                     foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
-                        $Uri = "https://api2.numergy.com/$Nversion/$TenantID/servers"
-                        $ImageSet = Get-ImageId;$SizeSet = Get-Size;$Name = ((Import-Csv $file -Delimiter ";").Name)
+                        $Uri = https://api2.numergy.com/$Nversion/$TenantID/servers
+                        $ImageSet = Get-ImageId -file $file;$SizeSet = Get-Size -file $file;$Name = ((Import-Csv $file -Delimiter ";").Name)
                         $Body = '{"server": {"flavorRef": "'+$SizeSet+'","imageRef": "'+$ImageSet+'","name": "'+$Name+'"}}'
                         Invoke-WebRequest -Uri $Uri -ContentType "application/json; charset=utf-8" -Headers @{"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Post -Body $Body
                     }
@@ -568,31 +570,31 @@ function PacMan {
                     $apiversion = "v2.8"
                     $Username = ((Import-Csv $file -Delimiter ";").Username);$Password = ((Import-Csv $file -Delimiter ";").Password)
                     foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
-                        $AdminPass = ((Import-Csv $file -Delimiter ";").AdminPass);$dcx = Get-Regions;$ImageSet = Get-ImageId;$SizeSet = Get-Size;$Name = ((Import-Csv $file -Delimiter ";").Name)
-                        $Uri = "https://api.$dcx.computing.cloud.it/WsEndUser/$apiversion/WsEndUser.svc/soap11"
+                        $AdminPass = ((Import-Csv $file -Delimiter ";").AdminPass);$dcx = Get-Regions -file $file;$ImageSet = Get-ImageId -file $file;$SizeSet = Get-Size -file $file;$Name = ((Import-Csv $file -Delimiter ";").Name)
+                        #$Uri = "https://api.$dcx.computing.cloud.it/WsEndUser/$apiversion/WsEndUser.svc/soap11"
                         [xml]$SOAPBody = "<soap:Envelope xmlns:arub='http://schemas.datacontract.org/2004/07/Aruba.Cloud.Provisioning.Entities' xmlns:soap='http://www.w3.org/2003/05/soap-envelope' xmlns:wsen='https://api.computing.cloud.it/WsEndUser'><soap:Header><wsse:Security soap:mustUnderstand='true' xmlns:wsse='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd' xmlns:wsu='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'><wsse:UsernameToken wsu:Id='UsernameToken-D73AFF2E1B956DC7A7145854908826214'><wsse:Username>$Username</wsse:Username><wsse:Password Type='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText'>$Password</wsse:Password><wsse:Nonce EncodingType='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'>8vRx/zg0wCriFAUUPLcYdw==</wsse:Nonce><wsu:Created>2016-03-21T08:31:28.262Z</wsu:Created></wsse:UsernameToken></wsse:Security></soap:Header><soap:Body><wsen:SetEnqueueServerCreation><wsen:server><arub:AdministratorPassword>$AdminPass</arub:AdministratorPassword><arub:Name>$Name</arub:Name><arub:OSTemplateId>$ImageSet</arub:OSTemplateId><arub:SmartVMWarePackageID>$SizeSet</arub:SmartVMWarePackageID></wsen:server></wsen:SetEnqueueServerCreation></soap:Body></soap:Envelope>"
-                        $headers = "SOAPAction: https://api.computing.cloud.it/WsEndUser/IWsEndUser/SetEnqueueServerCreation"
-                        [System.Net.ServicPointManager]::ServerCertificateValidationCallback = $null
-                        Invoke-WebRequest -Uri $uri -Method Post -ContentType "text/xml; charset=utf-8" -headers $headers -Body $SOAPBody
+                        $headers = @{"SOAPAction" = "https://api.computing.cloud.it/WsEndUser/IWsEndUser/SetEnqueueServerCreation"}
+                        #[System.Net.ServicPointManager]::ServerCertificateValidationCallback = $null
+                        Invoke-WebRequest -Uri https://api.$dcx.computing.cloud.it/WsEndUser/$apiversion/WsEndUser.svc/soap11 -Method Post -ContentType "text/xml; charset=utf-8" -headers $headers -Body $SOAPBody
                     }
                 }
                 #"Azure" {Get-Token}
                 "Google" {
                     foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
-                        $Zone = Get-Regions;$ImageSet=Get-ImageId;$Name = ((Import-Csv $file -Delimiter ";").Name);$Project = ((Import-Csv $file -Delimiter ";").Project)
-                        $SizeSet = Get-Size;$Key = ((Import-Csv $file -Delimiter ";").Key)
+                        $Zone = Get-Regions -file $file;$ImageSet=Get-ImageId -file $file;$Name = ((Import-Csv $file -Delimiter ";").Name);$Project = ((Import-Csv $file -Delimiter ";").Project)
+                        $SizeSet = Get-Size -file $file;$Key = ((Import-Csv $file -Delimiter ";").Key)
                         $headers = "headers=@{'Content-Type': 'application/x-www-form-urlencoded'}"
                         $Body = '{'+'"name"'+': '+'"'+$Name+'"','"machineType"'+': '+'"'+$SizeSet+'"'+'"networkInterfaces"'+': [{'+'"accessConfigs"'+': [{'+'"type"'+': "ONE_TO_ONE_NAT",'+'"name"'+': "External NAT"'+'}],'+'"network"'+': "global/networks/default"'+'}],'+'"disks"'+': [{'+'"autoDelete"'+': "true",'+'"boot"'+': "true",'+'"type"'+': "PERSISTENT",'+'"initializeParams"'+': {'+'"sourceImage"'+': '+"$Image"+'}'+'}]'+'}'
-                        $Uri = "https://www.googleapis.com/compute/v1/projects/$Project/zones/$Zone/instances?key=$Key"
+                        $Uri = https://www.googleapis.com/compute/v1/projects/$Project/zones/$Zone/instances?key=$Key
                         Invoke-WebRequest -Uri $Uri -ContentType "application/json" -Headers $headers -Method POST -body $Body
                     }
                 }
                 "Rackspace" {
                     foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
-                        $ImageSet=Get-ImageId;$Name = ((Import-Csv $file -Delimiter ";").Name);$SizeSet = Get-Size;$TokenSet = Get-Token
+                        $ImageSet = Get-ImageId -file $file;$Name = ((Import-Csv $file -Delimiter ";").Name);$SizeSet = Get-Size -file $file;$TokenSet = Get-Token -file $file
                         $Tenant = ((Import-Csv $file -Delimiter ";").Tenant);$Username = ((Import-Csv -Delimiter ";").Username);$Password = ((Import-Csv -Delimiter ";").Password)
                         $APIKey = ((Import-Csv -Delimiter ";").APIKey)
-                        Invoke-WebRequest -Uri "https://servers.api.rackspacecloud.com/v1.0/010101/v2/$Tenant/servers" -Method Post -ContentType "application/json" -Headers @{"X-Auth-Token" = $TokenSet;"X-Auth-Project-Id" = $Name} -Body "'{"+'"server": {"name": "'+$Name+'","imageRef": "'+$ImageSet+'", "flavorRef": "'+$sizeSet+'"}}'+"'" 
+                        Invoke-WebRequest -Uri https://servers.api.rackspacecloud.com/v1.0/010101/v2/$Tenant/servers -Method Post -ContentType "application/json" -Headers @{"X-Auth-Token" = $TokenSet;"X-Auth-Project-Id" = $Name} -Body "'{"+'"server": {"name": "'+$Name+'","imageRef": "'+$ImageSet+'", "flavorRef": "'+$sizeSet+'"}}'+"'" 
                     }
                 }
                 default{}
@@ -603,4 +605,4 @@ function PacMan {
 ################### Code ########################
 Write-Host "PoSH Easy Deploy $version"
 $file = Read-Host "Fichier d'inventaire"
-PacMan
+PacMan 
