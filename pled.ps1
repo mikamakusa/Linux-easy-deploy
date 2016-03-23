@@ -584,7 +584,7 @@ function PacMan {
                         $ServerId = ((Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers" -Method Post -ContentType "application/json" -Headers @{"Accept" = "application/json";"X-Auth-Token"= "$Token"} -Body $InsCreate | ConvertFrom-Json).server).id
                         $NetId = ((((Invoke-WebRequest -Uri "https://network.fr1.cloudwatt.com/v2/networks" -ContentType "application/json" -Method GET -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'}) | ConvertFrom-Json).networks).id | where {$_.name -match "public"})
                         $IP = (((Invoke-WebRequest -Uri "https://network.fr1.cloudwatt.com/v2/floatingips" -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'"+"{"+"floatingip"+':'+'{'+'"'+"floating_network_id"+'"'+':'+'"'+$NetId+'"}}'+"'" | ConvertFrom-Json).floatingip).floating_ip_address)
-                        Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/v2/$Tenant/servers/$ServerId/action -ContentType "application/json" -Method Post -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'{"+'addFloatingIp":{"address":"'+$IP+'"}}'+"'"
+                        Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/v2/$Tenant/servers/$ServerId/action -Method Post -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'{"+'addFloatingIp":{"address":"'+$IP+'"}}'+"'"
                     }      
                 }
                 "Numergy" {
@@ -631,11 +631,11 @@ function PacMan {
                             xml-commandv4 -header $SOAPHeader -body $BodyCreation | ArubaAPI -command command.xml -result result.xml -dc $dcx -apiversion $apiversion -instruction $instruction
                         }
                         else {
-                            $SOAPBody = "<soap:Envelope xmlns:arub='http://schemas.datacontract.org/2004/07/Aruba.Cloud.Provisioning.Entities' xmlns:soap='http://www.w3.org/2003/05/soap-envelope' xmlns:wsen='https://api.computing.cloud.it/WsEndUser'><soap:Header><wsse:Security soap:mustUnderstand='true' xmlns:wsse='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd' xmlns:wsu='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'><wsse:UsernameToken wsu:Id='UsernameToken-D73AFF2E1B956DC7A7145854908826214'><wsse:Username>$Username</wsse:Username><wsse:Password Type='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText'>$Password</wsse:Password><wsse:Nonce EncodingType='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'>8vRx/zg0wCriFAUUPLcYdw==</wsse:Nonce><wsu:Created>2016-03-21T08:31:28.262Z</wsu:Created></wsse:UsernameToken></wsse:Security></soap:Header><soap:Body><wsen:SetEnqueueServerCreation><wsen:server><arub:AdministratorPassword>$AdminPass</arub:AdministratorPassword><arub:Name>$VMName</arub:Name><arub:OSTemplateId>$ImageSet</arub:OSTemplateId><arub:SmartVMWarePackageID>$SizeSet</arub:SmartVMWarePackageID></wsen:server></wsen:SetEnqueueServerCreation></soap:Body>"
+                            [xml]$SOAPBody = "<soap:Envelope xmlns:arub='http://schemas.datacontract.org/2004/07/Aruba.Cloud.Provisioning.Entities' xmlns:soap='http://www.w3.org/2003/05/soap-envelope' xmlns:wsen='https://api.computing.cloud.it/WsEndUser'><soap:Header><wsse:Security soap:mustUnderstand='true' xmlns:wsse='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd' xmlns:wsu='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'><wsse:UsernameToken wsu:Id='UsernameToken-D73AFF2E1B956DC7A7145854908826214'><wsse:Username>$Username</wsse:Username><wsse:Password Type='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText'>$Password</wsse:Password><wsse:Nonce EncodingType='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'>8vRx/zg0wCriFAUUPLcYdw==</wsse:Nonce><wsu:Created>2016-03-21T08:31:28.262Z</wsu:Created></wsse:UsernameToken></wsse:Security></soap:Header><soap:Body><wsen:SetEnqueueServerCreation><wsen:server><arub:AdministratorPassword>$AdminPass</arub:AdministratorPassword><arub:Name>$VMName</arub:Name><arub:OSTemplateId>$ImageSet</arub:OSTemplateId><arub:SmartVMWarePackageID>$SizeSet</arub:SmartVMWarePackageID></wsen:server></wsen:SetEnqueueServerCreation></soap:Body>"
                             $headers = @{"SOAPAction" = "https://api.computing.cloud.it/WsEndUser/IWsEndUser/SetEnqueueServerCreation"}
                             [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $null
                             Invoke-WebRequest -Uri https://api.$dcx.computing.cloud.it/WsEndUser/$apiversion/WsEndUser.svc/soap11 -Method Post -ContentType "text/xml; charset=utf-8" -headers $headers -Body $SOAPBody
-                            }
+                        }
                     }
                 }
                 ### Tested but not ok ###
@@ -646,13 +646,14 @@ function PacMan {
                         $headers = "@{'Content-Type': 'application/x-www-form-urlencoded'}"
                         $Body = '{
                                 "name": "'+$VMName+'",
-                                "machineType": "'+$SizeSet+'" "networkInterfaces": 
+                                "machineType": "'+$SizeSet+'",
+                                "networkInterfaces": 
                                     [{"accessConfigs": 
                                         [{"type": "ONE_TO_ONE_NAT","name": "External NAT"}],
-                                    "network"'+': "global/networks/default"'+'}],
+                                    "network": "global/networks/default"}],
                                     "disks": 
                                     [{"autoDelete": "true",
-                                        "boot"'+': "true",
+                                        "boot": "true",
                                         "type": "PERSISTENT",
                                         "initializeParams": 
                                         {"sourceImage": "'+$Image+'"}
@@ -673,7 +674,7 @@ function PacMan {
                                 "flavorRef": "'+$sizeSet+'"
                                 }
                             }'
-                        Invoke-WebRequest -Uri https://servers.api.rackspacecloud.com/v1.0/010101/v2/$Tenant/servers -Method Post -ContentType "application/json" -Headers @{"X-Auth-Token" = $TokenSet;"X-Auth-Project-Id" = $VMName} -Body $Body 
+                        Invoke-WebRequest -Uri https://servers.api.rackspacecloud.com/v1.0/010101/v2/$Tenant/servers -Method Post -Headers @{"ContentType" = "application/json";"X-Auth-Token" = $TokenSet;"X-Auth-Project-Id" = $VMName} -Body $Body 
                     }
                 }
                 default{}
