@@ -30,15 +30,15 @@ For AWS
 For DigitalOcean  
 - **VMName** | **Image** | **Region** | **Size**  
 For Cloudwatt  
-- **Token** | **Tenant** | **VMName** | **Image** | Size  
+- **Token** | **Tenant** | **VMName** | **Image** | **Size**  
 For Numergy  
-- **Token** | **Tenant** | **VMName** | **Image** | Size  
+- **Token** | **Tenant** | **VMName** | **Image** | **Size**  
 For ArubaCloud  
-- **Username** | **Password** | **VMName** | **AdminPass** | Region | Image | Size  
+- **Username** | **Password** | **VMName** | **AdminPass** | **Region** | **Image** | **Size**  
 For Google  
-- **Key** | **VMName** | **Image** | Region | Size | Project  
+- **Key** | **VMName** | **Image** | **Region** | **Size** | **Project**  
 For Rackspace  
-- **Tenant** | **APIKey** | **VMName** | Username | Password | Image | Size | Token 
+- **Tenant** | **APIKey** | **VMName** | **Username** | **Password** | **Image** | **Size** | **Token** 
 
 ## Inventory file example - Packages(*.csv)
 
