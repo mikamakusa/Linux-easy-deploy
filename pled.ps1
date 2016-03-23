@@ -1,7 +1,7 @@
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $version = "1.3"
 ## Import SSH Module
-if (Get-Command | Where {$_.Name -notmatch "New-SShSession"}){
+if ((Get-Command -ListAvailable) -notmatch "New-SSHSession"){
     iex (New-Object Net.WebClient).DownloadString("https://gist.github.com/darkoperator/6152630/raw/c67de4f7cd780ba367cccbc2593f38d18ce6df89/instposhsshdev")
 } 
 Import-Module Posh-SSH 
@@ -141,7 +141,7 @@ function Get-Regions ($file) {
     $Region = ((Import-Csv $file -Delimiter ";").Region)
     $Name = ((Import-Csv $file -Delimiter ";").Name)
     switch ($Name) {
-        "Digital Ocean" {
+        "DigitalOcean" {
             switch ($Region) {
                 "New York" {return "nyc1"}
                 "Amsterdam" {return "ams2"}
@@ -173,7 +173,7 @@ function Get-Size ($file) {
     $Size = ((Import-Csv $file -Delimiter ";").Size)
     $Name = ((Import-Csv $file -Delimiter ";").Name)
     switch ($Name) {
-        "Digital Ocean" {
+        "DigitalOcean" {
             switch ($Size) {
                 "small" {return "512mb"}
                 "medium" {return "1gb"}
@@ -526,67 +526,84 @@ function PacMan {
                             New-EC2Instance -ImageId $Image -KeyName $AWSKey -SecurityGroupId $SGroup
                         }
                     }
-                    else {}
+                    else {
+                        $KeyPair = ((Import-Csv $file -Delimiter ";").Key)
+                        $SGroup = ((Import-Csv $file -Delimiter ";").SGroup)
+                        aws ec2 create-key-pair --key-name $KeyPair --query 'KeyMaterial' --output text > c:\MyKeyPair.pem
+                        aws ec2 create-security-group --group-name $SGroup --description "My security group"
+                        foreach ($item in ((Import-Csv $file -Delimiter ";").InstanceTag)) {
+                            $ImageSet = Get-ImageId -file $file
+                            aws ec2 run-instances --image-id $ImageSet --count 1 --instance-type t1.micro --key-name $KeyPair --security-groups $SGroup
+                        }
+                    }
                 }
                 "DigitalOcean" { 
                     foreach ($item in ((Import-Csv $file -Delimiter ";").VMName)) {
                         $Token = ((Import-Csv $file -Delimiter ";").Token)
                         $VMName = ((Import-Csv $file -Delimiter ";").VMName)
                         $ImageSet = Get-ImageId -file $file;$RegionSet = Get-Regions -file $file;$SizeSet = Get-Size -file $file
-                        [string]$Body = "'"+'{"name":"'+$VMName+'"'+","+'"region":"'+$RegionSet+'"'+","+'"size":"'+$SizeSet+'"'+","+'"image":"'+$ImageSet+'"'+","+'"ssh_keys":null,"backups":false,"ipv6":true,"user_data":null,"private_networking":null}'+"'"
-                        Invoke-WebRequest -Uri https://api.digitalocean.com/v2/droplets -ContentType "application/json" -Method Get -Headers @{"Authorization" = "Bearer $Token"} -Body $Body  
+                        $body = '{
+                          "name": "'+$VMName+'",
+                          "region": "'+$RegionSet+'",
+                          "size": "'+$SizeSet+'",
+                          "image": "'+$ImageSet+'",
+                          "ssh_keys": null,
+                          "backups": false,
+                          "ipv6": true,
+                          "user_data": null,
+                          "private_networking": null
+                        }'
+                        Invoke-WebRequest -Uri https://api.digitalocean.com/v2/droplets -Method POST -Headers @{"Content-Type" = "application/json";"Authorization" = "Bearer $Token"} -Body $body  
                     }
                 }
                 "Cloudwatt" {
-                    foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
-                        $TokenSet = Get-Token -file $file; $ImageSet = Get-ImageId -file $file; $SizeSet = Get-Size -file $file;$Name = ((Import-Csv $file -Delimiter ";").Name);$Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
-                        [xml]$InsCreate = "<?xml version='1.0' encoding='UTF-8'?><server xmlns='http://docs.openstack.org/compute/api/v1.1' imageRef='$ImageSet' flavorRef='$SizeSet' name='$Name'></server>" 
+                    foreach ($item in ((Import-Csv $file -Delimiter ";").VMName)) {
+                        $TokenSet = Get-Token -file $file; $ImageSet = Get-ImageId -file $file; $SizeSet = Get-Size -file $file;$VMName = ((Import-Csv $file -Delimiter ";").VMName);$Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
+                        [xml]$InsCreate = "<?xml version='1.0' encoding='UTF-8'?><server xmlns='http://docs.openstack.org/compute/api/v1.1' imageRef='$ImageSet' flavorRef='$SizeSet' name='$VMName'></server>" 
                         Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers" -Method Post -ContentType "application/json" -Headers @{"Accept" = "application/json";"X-Auth-Token"= "$Token"}
                         $ServerId = ((Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers" -Method Post -ContentType "application/json" -Headers @{"Accept" = "application/json";"X-Auth-Token"= "$Token"} -Body $InsCreate | ConvertFrom-Json).server).id
                         $NetId = ((((Invoke-WebRequest -Uri "https://network.fr1.cloudwatt.com/v2/networks" -ContentType "application/json" -Method GET -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'}) | ConvertFrom-Json).networks).id | where {$_.name -match "public"})
                         $IP = (((Invoke-WebRequest -Uri "https://network.fr1.cloudwatt.com/v2/floatingips" -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'"+"{"+"floatingip"+':'+'{'+'"'+"floating_network_id"+'"'+':'+'"'+$NetId+'"}}'+"'" | ConvertFrom-Json).floatingip).floating_ip_address)
-                        Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/v2/$Tenant/servers/$ServerId/action -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'{"+'addFloatingIp":{"address":"'+$IP+'"}}'+"'"
+                        Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/v2/$Tenant/servers/$ServerId/action -ContentType "application/json" -Method Post -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'{"+'addFloatingIp":{"address":"'+$IP+'"}}'+"'"
                     }      
                 }
                 "Numergy" {
                     $Nversion = ((Invoke-WebRequest -Uri "https://api2.numergy.com/" -ContentType "application/json; charset=utf-8" -Method Get | ConvertFrom-Json).versions | select -Property id,status -Last 1).id
                     $TokenSet = Get-Token;$TenantID = ((Import-Csv $file -Delimiter ";").Tenant)
-                    foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
+                    foreach ($item in ((Import-Csv $file -Delimiter ";").VMName)) {
                         $Uri = https://api2.numergy.com/$Nversion/$TenantID/servers
-                        $ImageSet = Get-ImageId -file $file;$SizeSet = Get-Size -file $file;$Name = ((Import-Csv $file -Delimiter ";").Name)
-                        $Body = '{"server": {"flavorRef": "'+$SizeSet+'","imageRef": "'+$ImageSet+'","name": "'+$Name+'"}}'
-                        Invoke-WebRequest -Uri $Uri -ContentType "application/json; charset=utf-8" -Headers @{"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Post -Body $Body
+                        $ImageSet = Get-ImageId -file $file;$SizeSet = Get-Size -file $file;$Name = ((Import-Csv $file -Delimiter ";").VMName)
+                        $Body = '{"server": {"flavorRef": "'+$SizeSet+'","imageRef": "'+$ImageSet+'","name": "'+$VMName+'"}}'
+                        Invoke-WebRequest -Uri https://api2.numergy.com/$Nversion/$TenantID/servers -Method Post -Headers @{"ContentType" = "application/json; charset=utf-8";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body $Body
                     }
                 }
                 "Arubacloud" {
-                    $apiversion = "v2.8"
-                    $Username = ((Import-Csv $file -Delimiter ";").Username);$Password = ((Import-Csv $file -Delimiter ";").Password)
-                    foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
-                        $AdminPass = ((Import-Csv $file -Delimiter ";").AdminPass);$dcx = Get-Regions -file $file;$ImageSet = Get-ImageId -file $file;$SizeSet = Get-Size -file $file;$Name = ((Import-Csv $file -Delimiter ";").Name)
-                        #$Uri = "https://api.$dcx.computing.cloud.it/WsEndUser/$apiversion/WsEndUser.svc/soap11"
-                        [xml]$SOAPBody = "<soap:Envelope xmlns:arub='http://schemas.datacontract.org/2004/07/Aruba.Cloud.Provisioning.Entities' xmlns:soap='http://www.w3.org/2003/05/soap-envelope' xmlns:wsen='https://api.computing.cloud.it/WsEndUser'><soap:Header><wsse:Security soap:mustUnderstand='true' xmlns:wsse='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd' xmlns:wsu='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'><wsse:UsernameToken wsu:Id='UsernameToken-D73AFF2E1B956DC7A7145854908826214'><wsse:Username>$Username</wsse:Username><wsse:Password Type='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText'>$Password</wsse:Password><wsse:Nonce EncodingType='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'>8vRx/zg0wCriFAUUPLcYdw==</wsse:Nonce><wsu:Created>2016-03-21T08:31:28.262Z</wsu:Created></wsse:UsernameToken></wsse:Security></soap:Header><soap:Body><wsen:SetEnqueueServerCreation><wsen:server><arub:AdministratorPassword>$AdminPass</arub:AdministratorPassword><arub:Name>$Name</arub:Name><arub:OSTemplateId>$ImageSet</arub:OSTemplateId><arub:SmartVMWarePackageID>$SizeSet</arub:SmartVMWarePackageID></wsen:server></wsen:SetEnqueueServerCreation></soap:Body></soap:Envelope>"
-                        $headers = @{"SOAPAction" = "https://api.computing.cloud.it/WsEndUser/IWsEndUser/SetEnqueueServerCreation"}
+                    foreach ($item in ((Import-Csv $file -Delimiter ";").VMName)) {
+                        $apiversion = "v2.8"
+                        $Username = ((Import-Csv $file -Delimiter ";").Username);$Password = ((Import-Csv $file -Delimiter ";").Password)
+                        $AdminPass = ((Import-Csv $file -Delimiter ";").AdminPass);$dcx = Get-Regions -file $file;$ImageSet = Get-ImageId -file $file;$SizeSet = Get-Size -file $file;$VMName = ((Import-Csv $file -Delimiter ";").VMName)
+                        [xml]$SOAPBody = "<soap:Envelope xmlns:arub='http://schemas.datacontract.org/2004/07/Aruba.Cloud.Provisioning.Entities' xmlns:soap='http://www.w3.org/2003/05/soap-envelope' xmlns:wsen='https://api.computing.cloud.it/WsEndUser'><soap:Header><wsse:Security soap:mustUnderstand='true' xmlns:wsse='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd' xmlns:wsu='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'><wsse:UsernameToken wsu:Id='UsernameToken-D73AFF2E1B956DC7A7145854908826214'><wsse:Username>$Username</wsse:Username><wsse:Password Type='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText'>$Password</wsse:Password><wsse:Nonce EncodingType='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'>8vRx/zg0wCriFAUUPLcYdw==</wsse:Nonce><wsu:Created>2016-03-21T08:31:28.262Z</wsu:Created></wsse:UsernameToken></wsse:Security></soap:Header><soap:Body><wsen:SetEnqueueServerCreation><wsen:server><arub:AdministratorPassword>$AdminPass</arub:AdministratorPassword><arub:Name>$VMName</arub:Name><arub:OSTemplateId>$ImageSet</arub:OSTemplateId><arub:SmartVMWarePackageID>$SizeSet</arub:SmartVMWarePackageID></wsen:server></wsen:SetEnqueueServerCreation></soap:Body></soap:Envelope>"
+                        $headers = @{"ContentType" = "text/xml; charset=utf-8" ;"SOAPAction" = "https://api.computing.cloud.it/WsEndUser/IWsEndUser/SetEnqueueServerCreation"}
                         New-Object System.Net.WebClient 
                         [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$false}
-                        Invoke-WebRequest -Uri https://api.$dcx.computing.cloud.it/WsEndUser/$apiversion/WsEndUser.svc/soap11 -Method Post -ContentType "text/xml; charset=utf-8" -headers $headers -Body $SOAPBody
+                        Invoke-WebRequest -Uri https://api.$dcx.computing.cloud.it/WsEndUser/$apiversion/WsEndUser.svc/soap11 -Method Post -headers $headers -Body $SOAPBody
                     }
                 }
                 "Google" {
-                    foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
-                        $Zone = Get-Regions -file $file;$ImageSet=Get-ImageId -file $file;$Name = ((Import-Csv $file -Delimiter ";").Name);$Project = ((Import-Csv $file -Delimiter ";").Project)
+                    foreach ($item in ((Import-Csv $file -Delimiter ";").VMName)) {
+                        $Zone = Get-Regions -file $file;$ImageSet=Get-ImageId -file $file;$VMName = ((Import-Csv $file -Delimiter ";").VMName);$Project = ((Import-Csv $file -Delimiter ";").Project)
                         $SizeSet = Get-Size -file $file;$Key = ((Import-Csv $file -Delimiter ";").Key)
-                        $headers = "headers=@{'Content-Type': 'application/x-www-form-urlencoded'}"
-                        $Body = '{'+'"name"'+': '+'"'+$Name+'"','"machineType"'+': '+'"'+$SizeSet+'"'+'"networkInterfaces"'+': [{'+'"accessConfigs"'+': [{'+'"type"'+': "ONE_TO_ONE_NAT",'+'"name"'+': "External NAT"'+'}],'+'"network"'+': "global/networks/default"'+'}],'+'"disks"'+': [{'+'"autoDelete"'+': "true",'+'"boot"'+': "true",'+'"type"'+': "PERSISTENT",'+'"initializeParams"'+': {'+'"sourceImage"'+': '+"$Image"+'}'+'}]'+'}'
-                        $Uri = https://www.googleapis.com/compute/v1/projects/$Project/zones/$Zone/instances?key=$Key
-                        Invoke-WebRequest -Uri $Uri -ContentType "application/json" -Headers $headers -Method POST -body $Body
+                        $headers = "@{'Content-Type': 'application/x-www-form-urlencoded'}"
+                        $Body = '{'+'"name"'+': '+'"'+$VMName+'"','"machineType"'+': '+'"'+$SizeSet+'"'+'"networkInterfaces"'+': [{'+'"accessConfigs"'+': [{'+'"type"'+': "ONE_TO_ONE_NAT",'+'"name"'+': "External NAT"'+'}],'+'"network"'+': "global/networks/default"'+'}],'+'"disks"'+': [{'+'"autoDelete"'+': "true",'+'"boot"'+': "true",'+'"type"'+': "PERSISTENT",'+'"initializeParams"'+': {'+'"sourceImage"'+': '+"$Image"+'}'+'}]'+'}'
+                        Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/zones/$Zone/instances?key=$Key -Method POST -Headers @{"ContentType" = "application/json";"Content-Type" = "application/x-www-form-urlencoded"} -body $Body
                     }
                 }
                 "Rackspace" {
-                    foreach ($item in ((Import-Csv $file -Delimiter ";").Name)) {
-                        $ImageSet = Get-ImageId -file $file;$Name = ((Import-Csv $file -Delimiter ";").Name);$SizeSet = Get-Size -file $file;$TokenSet = Get-Token -file $file
+                    foreach ($item in ((Import-Csv $file -Delimiter ";").VMName)) {
+                        $ImageSet = Get-ImageId -file $file;$VMName = ((Import-Csv $file -Delimiter ";").VMName);$SizeSet = Get-Size -file $file;$TokenSet = Get-Token -file $file
                         $Tenant = ((Import-Csv $file -Delimiter ";").Tenant);$Username = ((Import-Csv -Delimiter ";").Username);$Password = ((Import-Csv -Delimiter ";").Password)
                         $APIKey = ((Import-Csv -Delimiter ";").APIKey)
-                        Invoke-WebRequest -Uri https://servers.api.rackspacecloud.com/v1.0/010101/v2/$Tenant/servers -Method Post -ContentType "application/json" -Headers @{"X-Auth-Token" = $TokenSet;"X-Auth-Project-Id" = $Name} -Body "'{"+'"server": {"name": "'+$Name+'","imageRef": "'+$ImageSet+'", "flavorRef": "'+$sizeSet+'"}}'+"'" 
+                        Invoke-WebRequest -Uri https://servers.api.rackspacecloud.com/v1.0/010101/v2/$Tenant/servers -Method Post -ContentType "application/json" -Headers @{"X-Auth-Token" = $TokenSet;"X-Auth-Project-Id" = $VMName} -Body "'{"+'"server": {"name": "'+$Name+'","imageRef": "'+$ImageSet+'", "flavorRef": "'+$sizeSet+'"}}'+"'" 
                     }
                 }
                 default{}

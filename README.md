@@ -9,17 +9,31 @@ Cloud Providers supported : ArubaCloud, CloudWatt, Numergy, Amazon WebServices, 
 
 ## Keywords needed
 - **Type** : Host | Provider  
-- **Type** \ **Host** : OS (Linux | Windows)  
-- **Type** \ **Host** \ **OS** \ Linux** (Package | Docker | Firewall (wip)) - **Type \ Host \ Os \ Windows** (Roles | Softwares | Containers (only for Windows 2016) | Firewall)  
-- **Type** \ **Host** \ **OS** \ **Linux** \ **Package** (**Action** : Install | Remove | Search | UpSystem | UpPackage) 
-- **Type** \ **Host** \ **OS** \ **Linux** \ **Docker** (**Action** : Deploy | Build | Stop | Remove)  
-- **Type** \ **Host** \ **Os** \ **Windows** \ **Part** (Roles | Software | Containers | Firewall)  
-- **Type** \ **Host** \ **Os** \ **Windows** \ **Part** \ **Roles** (Domain | Certificate | Federation | Application Server | Network | Print | Remote | Deployment | Web Server)    
-- **Type** \ **Host** \ **Os** \ **Windows** \ **Part** \ **Softwares** (Exchange | Sharepoint | Skype)  
-- **Type** \ **Host** \ **Os** \ **Windows** \ **Part** \ **Containers** (Fore Windows 2016)
-- **Type** \ **Host** \ **Os** \ **Windows** \ **Part** \ **Firewall** (WIP)
-- **Type** \ **Provider** (PName)
-- **Type** \ **Provider** \ **PName** (AWS | Digital Ocean | Cloudwatt | Numergy | Arubacloud | Google | Rackspace)
+- **Host** : OS (Linux | Windows)    
+- **OS** : **Linux** (Package | Docker | Firewall (wip)) - **Type \ Host \ Os \ Windows** (Roles | Softwares | Containers (only for Windows 2016) | Firewall)    
+- **Linux** : **Package** (**Action** : Install | Remove | Search | UpSystem | UpPackage)  
+- **Linux** : **Docker** (**Action** : Deploy | Build | Stop | Remove)  
+- **Os** : **Windows** \ **Part** (Roles | Software | Containers | Firewall)    
+- **Part** \ **Roles** (Domain | Certificate | Federation | Application Server | Network | Print | Remote | Deployment | Web Server)      
+- **Part** \ **Softwares** (Exchange | Sharepoint | Skype)  
+- **Part** \ **Containers** (Fore Windows 2016)  
+- **Part** \ **Firewall** (WIP)  
+- **Type** \ **Provider** (Name)  
+- **Provider** \ **Name** (AWS | DigitalOcean | Cloudwatt | Numergy | Arubacloud | Google | Rackspace)  
+For AWS  
+- **Type** \ **Provider** \ **Name** \ InstanceTag | Image | Key | SGroup  
+For DigitalOcean  
+- **Type** \ **Provider** \ **Name** \ VMName | Image | Region | Size  
+For Cloudwatt  
+- **Type** \ **Provider** \ **Name** \ Token | Tenant | VMName | Image | Size  
+For Numergy  
+- **Type** \ **Provider** \ **Name** \ Token | Tenant | VMName | Image | Size  
+For ArubaCloud  
+**Type** \ **Provider** \ **Name** \ Username | Password | VMName | AdminPass | Region | Image | Size  
+For Google  
+**Type** \ **Provider** \ **Name** \ Key | VMName | Image | Region | Size | Project  
+For Rackspace  
+**Type** \ **Provider** \ **Name** \ Tenant | APIKey | VMName | Username | Password | Image | Size | Token 
 
 ## Common keywords
 Providers : Image | Name | Region | Size | Tenant | TenantId | AccessKey | SecretKey | Username | Password | Nversion
@@ -47,8 +61,8 @@ Check the Package Manager and do a System Upgrade
 
 ##Inventory file example - Providers
     
-    Type;Token;PName;Image;Region;Size
-    Provider;zadzadzazafzgtjkukli:fjd,,h,;Digital Ocean;Ubuntu;Amsterdam;small
+    Type;Name;Token;Region;Image;Size;VMName
+    Provider;DigitalOcean;################################################################;Amsterdam;Ubuntu;small;test1
 
 ## How it works ?
 Launch the script, enter the inventory file...and let's play !
