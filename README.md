@@ -1,5 +1,10 @@
-# Linux-easy-deploy
-Deploy Packages/Roles/Docker containers on linux distributions with Powershell
+# Linux-easy-deploy - 
+
+Deploy : 
+
+- Packages and Docker Container on Linux distributions
+- Roles and services on Windows Server (And Windows Containers for Windows 2016)
+- Cloud Instances on Cloud Providers Platforms) 
 
 # v1.3
 
@@ -10,33 +15,30 @@ Cloud Providers supported : ArubaCloud, CloudWatt, Numergy, Amazon WebServices, 
 ## Keywords needed
 - **Type** : Host | Provider  
 - **Host** : OS (Linux | Windows)    
-- **OS** : **Linux** (Package | Docker | Firewall (wip)) - **Type \ Host \ Os \ Windows** (Roles | Softwares | Containers (only for Windows 2016) | Firewall)    
-- **Linux** : **Package** (**Action** : Install | Remove | Search | UpSystem | UpPackage)  
-- **Linux** : **Docker** (**Action** : Deploy | Build | Stop | Remove)  
+- **OS** : **Linux** (Package | Docker | Firewall (wip))     
+- **Linux** : **Package** \ **Action** (Install | Remove | Search | UpSystem | UpPackage)  
+- **Linux** : **Docker** \ **Action** (Deploy | Build | Stop | Remove)
 - **Os** : **Windows** \ **Part** (Roles | Software | Containers | Firewall)    
-- **Part** \ **Roles** (Domain | Certificate | Federation | Application Server | Network | Print | Remote | Deployment | Web Server)      
-- **Part** \ **Softwares** (Exchange | Sharepoint | Skype)  
-- **Part** \ **Containers** (Fore Windows 2016)  
-- **Part** \ **Firewall** (WIP)  
-- **Type** \ **Provider** (Name)  
-- **Provider** \ **Name** (AWS | DigitalOcean | Cloudwatt | Numergy | Arubacloud | Google | Rackspace)  
+- **Part** : **Roles** (Domain | Certificate | Federation | Application Server | Network | Print | Remote | Deployment | Web Server)      
+- **Part** : **Softwares** (Exchange | Sharepoint | Skype)  
+- **Part** : **Containers** (Fore Windows 2016)  
+- **Part** : **Firewall** (WIP)  
+- **Type** : **Provider** (Name)  
+- **Provider** : **Name** (AWS | DigitalOcean | Cloudwatt | Numergy | Arubacloud | Google | Rackspace)  
 For AWS  
-- **Type** \ **Provider** \ **Name** \ InstanceTag | Image | Key | SGroup  
+- InstanceTag | Image | Key | SGroup  
 For DigitalOcean  
-- **Type** \ **Provider** \ **Name** \ VMName | Image | Region | Size  
+- VMName | Image | Region | Size  
 For Cloudwatt  
-- **Type** \ **Provider** \ **Name** \ Token | Tenant | VMName | Image | Size  
+- Token | Tenant | VMName | Image | Size  
 For Numergy  
-- **Type** \ **Provider** \ **Name** \ Token | Tenant | VMName | Image | Size  
+- Token | Tenant | VMName | Image | Size  
 For ArubaCloud  
-**Type** \ **Provider** \ **Name** \ Username | Password | VMName | AdminPass | Region | Image | Size  
+- Username | Password | VMName | AdminPass | Region | Image | Size  
 For Google  
-**Type** \ **Provider** \ **Name** \ Key | VMName | Image | Region | Size | Project  
+- Key | VMName | Image | Region | Size | Project  
 For Rackspace  
-**Type** \ **Provider** \ **Name** \ Tenant | APIKey | VMName | Username | Password | Image | Size | Token 
-
-## Common keywords
-Providers : Image | Name | Region | Size | Tenant | TenantId | AccessKey | SecretKey | Username | Password | Nversion
+- Tenant | APIKey | VMName | Username | Password | Image | Size | Token 
 
 ## Inventory file example - Packages(*.csv)
 
