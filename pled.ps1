@@ -1,10 +1,10 @@
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $version = "1.3"
 ## Import SSH Module
-if ((Get-Command -ListAvailable) -notmatch "New-SSHSession"){
-    iex (New-Object Net.WebClient).DownloadString("https://gist.github.com/darkoperator/6152630/raw/c67de4f7cd780ba367cccbc2593f38d18ce6df89/instposhsshdev")
-} 
-Import-Module Posh-SSH 
+    if ((Get-Command -All) -notmatch "New-SSHSession"){
+        iex (New-Object Net.WebClient).DownloadString("https://gist.github.com/darkoperator/6152630/raw/c67de4f7cd780ba367cccbc2593f38d18ce6df89/instposhsshdev")
+    } 
+#Import-Module Posh-SSH 
 ## Import predefined functions
 function Install-MSIFile {
     [CmdletBinding()]
@@ -42,6 +42,11 @@ function Unzip {
     [System.IO.Compression.ZipFile]::ExtractToDirectory($zipfile, $outpath)
 }
 ## Custom functions
+function Check_Wget {
+    if ((Get-ChildItem "c:\Windows\System32") -notmatch "wget") {
+    Invoke-WebRequest -Uri "https://eternallybored.org/misc/wget/current/wget64.exe" -OutFile "c:\Windows\System32\wget64.exe"
+    Rename-Item -Path "c:\Windows\System32\wget64.exe" -NewName "c:\Windows\System32\wget.exe"}
+}
 function Check_AWS_tools{
     if (((Get-WmiObject -Class Win32_OperatingSystem).Caption -match "Windows 2012") -or (((Get-WmiObject -Class Win32_OperatingSystem).Caption -match "Windows 2008") -and (($Host).Version).Major -match "5")) {
         if ((Get-Command -ListAvailable) -notmatch "AWSPowerShell") {
@@ -269,6 +274,21 @@ function Get-Token ($file) {
 function Win_Role_Deploy {
     if ((Get-WMIObject -Class Win32_OperatingSystem).Caption -match "Windows 2008") {return "Add-WindowsFeature"}
     else {return "Install-WindowsFeature"}
+}
+function xml-commandv4 ($header, $body) {
+    $location = (Get-Location).Path
+    $filePath = "$location\command.xml"
+    $xmlwriter = New-Object System.XMl.XmlTextWriter($filepath,$Null)
+    $xmlwriter.WriteRaw("$header")
+    $XmlWriter.WriteRaw("$Body")
+    $XmlWriter.WriteRaw("</soapenv:Envelope>")
+    $xmlWriter.Finalize
+    $xmlWriter.Close()
+}
+function ArubaAPI ($command, $result, $dc, $apiversion, $instruction) {
+    if ((Get-ChildItem "c:\Windows\System32") -notmatch "wget") {
+        wget.exe -O $result -q --post-file=$command --header "SOAPAction: https://api.computing.cloud.it/WsEndUser/IWsEndUser/$instruction" --header "Content-Type: text/xml;charset=UTF-8" --no-check-certificate https://api.$dc.computing.cloud.it/WsEndUser/$apiversion/WsEndUser.svc/soap11
+    }
 }
 ## Main function
 function PacMan {
@@ -577,24 +597,67 @@ function PacMan {
                         Invoke-WebRequest -Uri https://api2.numergy.com/$Nversion/$TenantID/servers -Method Post -Headers @{"ContentType" = "application/json; charset=utf-8";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body $Body
                     }
                 }
+                ### Tested but not ok ###
                 "Arubacloud" {
                     foreach ($item in ((Import-Csv $file -Delimiter ";").VMName)) {
                         $apiversion = "v2.8"
                         $Username = ((Import-Csv $file -Delimiter ";").Username);$Password = ((Import-Csv $file -Delimiter ";").Password)
                         $AdminPass = ((Import-Csv $file -Delimiter ";").AdminPass);$dcx = Get-Regions -file $file;$ImageSet = Get-ImageId -file $file;$SizeSet = Get-Size -file $file;$VMName = ((Import-Csv $file -Delimiter ";").VMName)
-                        [xml]$SOAPBody = "<soap:Envelope xmlns:arub='http://schemas.datacontract.org/2004/07/Aruba.Cloud.Provisioning.Entities' xmlns:soap='http://www.w3.org/2003/05/soap-envelope' xmlns:wsen='https://api.computing.cloud.it/WsEndUser'><soap:Header><wsse:Security soap:mustUnderstand='true' xmlns:wsse='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd' xmlns:wsu='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'><wsse:UsernameToken wsu:Id='UsernameToken-D73AFF2E1B956DC7A7145854908826214'><wsse:Username>$Username</wsse:Username><wsse:Password Type='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText'>$Password</wsse:Password><wsse:Nonce EncodingType='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'>8vRx/zg0wCriFAUUPLcYdw==</wsse:Nonce><wsu:Created>2016-03-21T08:31:28.262Z</wsu:Created></wsse:UsernameToken></wsse:Security></soap:Header><soap:Body><wsen:SetEnqueueServerCreation><wsen:server><arub:AdministratorPassword>$AdminPass</arub:AdministratorPassword><arub:Name>$VMName</arub:Name><arub:OSTemplateId>$ImageSet</arub:OSTemplateId><arub:SmartVMWarePackageID>$SizeSet</arub:SmartVMWarePackageID></wsen:server></wsen:SetEnqueueServerCreation></soap:Body></soap:Envelope>"
-                        $headers = @{"ContentType" = "text/xml; charset=utf-8" ;"SOAPAction" = "https://api.computing.cloud.it/WsEndUser/IWsEndUser/SetEnqueueServerCreation"}
-                        New-Object System.Net.WebClient 
-                        [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$false}
-                        Invoke-WebRequest -Uri https://api.$dcx.computing.cloud.it/WsEndUser/$apiversion/WsEndUser.svc/soap11 -Method Post -headers $headers -Body $SOAPBody
+                        if ((Get-WmiObject -Class Win32_OperatingSystem).Caption -match "Windows 7") {
+                            $SOAPHeader = "<soap:Envelope xmlns:arub='http://schemas.datacontract.org/2004/07/Aruba.Cloud.Provisioning.Entities' xmlns:soap='http://www.w3.org/2003/05/soap-envelope' xmlns:wsen='https://api.computing.cloud.it/WsEndUser'>
+                                <soap:Header>
+                                        <wsse:Security soap:mustUnderstand='true' xmlns:wsse='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd' xmlns:wsu='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'><wsse:UsernameToken wsu:Id='UsernameToken-D73AFF2E1B956DC7A7145854908826214'>
+                                        <wsse:Username>$Username</wsse:Username>
+                                        <wsse:Password Type='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText'>$Password</wsse:Password>
+                                        <wsse:Nonce EncodingType='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'>8vRx/zg0wCriFAUUPLcYdw==</wsse:Nonce>
+                                        <wsu:Created>2016-03-21T08:31:28.262Z</wsu:Created>
+                                    </wsse:UsernameToken>
+                                </wsse:Security>
+                            </soap:Header>
+                            "
+                            $BodyCreation = "<soap:Body>
+                                <wsen:SetEnqueueServerCreation>
+                                <wsen:server>
+                                <arub:AdministratorPassword>$AdminPass</arub:AdministratorPassword>
+                                <arub:Name>$VMName</arub:Name>
+                                <arub:OSTemplateId>$ImageSet</arub:OSTemplateId>
+                                <arub:SmartVMWarePackageID>$SizeSet</arub:SmartVMWarePackageID>
+                                </wsen:server>
+                                </wsen:SetEnqueueServerCreation>
+                            </soap:Body>
+                            "
+                            $headers = @{"SOAPAction" = "https://api.computing.cloud.it/WsEndUser/IWsEndUser/SetEnqueueServerCreation"}
+                            $instruction = "SetEnqueueServerCreation"
+                            xml-commandv4 -header $SOAPHeader -body $BodyCreation | ArubaAPI -command command.xml -result result.xml -dc $dcx -apiversion $apiversion -instruction $instruction
+                        }
+                        else {
+                            $SOAPBody = "<soap:Envelope xmlns:arub='http://schemas.datacontract.org/2004/07/Aruba.Cloud.Provisioning.Entities' xmlns:soap='http://www.w3.org/2003/05/soap-envelope' xmlns:wsen='https://api.computing.cloud.it/WsEndUser'><soap:Header><wsse:Security soap:mustUnderstand='true' xmlns:wsse='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd' xmlns:wsu='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'><wsse:UsernameToken wsu:Id='UsernameToken-D73AFF2E1B956DC7A7145854908826214'><wsse:Username>$Username</wsse:Username><wsse:Password Type='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText'>$Password</wsse:Password><wsse:Nonce EncodingType='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'>8vRx/zg0wCriFAUUPLcYdw==</wsse:Nonce><wsu:Created>2016-03-21T08:31:28.262Z</wsu:Created></wsse:UsernameToken></wsse:Security></soap:Header><soap:Body><wsen:SetEnqueueServerCreation><wsen:server><arub:AdministratorPassword>$AdminPass</arub:AdministratorPassword><arub:Name>$VMName</arub:Name><arub:OSTemplateId>$ImageSet</arub:OSTemplateId><arub:SmartVMWarePackageID>$SizeSet</arub:SmartVMWarePackageID></wsen:server></wsen:SetEnqueueServerCreation></soap:Body>"
+                            $headers = @{"SOAPAction" = "https://api.computing.cloud.it/WsEndUser/IWsEndUser/SetEnqueueServerCreation"}
+                            [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $null
+                            Invoke-WebRequest -Uri https://api.$dcx.computing.cloud.it/WsEndUser/$apiversion/WsEndUser.svc/soap11 -Method Post -ContentType "text/xml; charset=utf-8" -headers $headers -Body $SOAPBody
+                            }
                     }
                 }
+                ### Tested but not ok ###
                 "Google" {
                     foreach ($item in ((Import-Csv $file -Delimiter ";").VMName)) {
                         $Zone = Get-Regions -file $file;$ImageSet=Get-ImageId -file $file;$VMName = ((Import-Csv $file -Delimiter ";").VMName);$Project = ((Import-Csv $file -Delimiter ";").Project)
                         $SizeSet = Get-Size -file $file;$Key = ((Import-Csv $file -Delimiter ";").Key)
                         $headers = "@{'Content-Type': 'application/x-www-form-urlencoded'}"
-                        $Body = '{'+'"name"'+': '+'"'+$VMName+'"','"machineType"'+': '+'"'+$SizeSet+'"'+'"networkInterfaces"'+': [{'+'"accessConfigs"'+': [{'+'"type"'+': "ONE_TO_ONE_NAT",'+'"name"'+': "External NAT"'+'}],'+'"network"'+': "global/networks/default"'+'}],'+'"disks"'+': [{'+'"autoDelete"'+': "true",'+'"boot"'+': "true",'+'"type"'+': "PERSISTENT",'+'"initializeParams"'+': {'+'"sourceImage"'+': '+"$Image"+'}'+'}]'+'}'
+                        $Body = '{
+                                "name": "'+$VMName+'",
+                                "machineType": "'+$SizeSet+'" "networkInterfaces": 
+                                    [{"accessConfigs": 
+                                        [{"type": "ONE_TO_ONE_NAT","name": "External NAT"}],
+                                    "network"'+': "global/networks/default"'+'}],
+                                    "disks": 
+                                    [{"autoDelete": "true",
+                                        "boot"'+': "true",
+                                        "type": "PERSISTENT",
+                                        "initializeParams": 
+                                        {"sourceImage": "'+$Image+'"}
+                                    }]
+                                }'
                         Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/zones/$Zone/instances?key=$Key -Method POST -Headers @{"ContentType" = "application/json";"Content-Type" = "application/x-www-form-urlencoded"} -body $Body
                     }
                 }
@@ -603,7 +666,14 @@ function PacMan {
                         $ImageSet = Get-ImageId -file $file;$VMName = ((Import-Csv $file -Delimiter ";").VMName);$SizeSet = Get-Size -file $file;$TokenSet = Get-Token -file $file
                         $Tenant = ((Import-Csv $file -Delimiter ";").Tenant);$Username = ((Import-Csv -Delimiter ";").Username);$Password = ((Import-Csv -Delimiter ";").Password)
                         $APIKey = ((Import-Csv -Delimiter ";").APIKey)
-                        Invoke-WebRequest -Uri https://servers.api.rackspacecloud.com/v1.0/010101/v2/$Tenant/servers -Method Post -ContentType "application/json" -Headers @{"X-Auth-Token" = $TokenSet;"X-Auth-Project-Id" = $VMName} -Body "'{"+'"server": {"name": "'+$Name+'","imageRef": "'+$ImageSet+'", "flavorRef": "'+$sizeSet+'"}}'+"'" 
+                        $Body = '{
+                            "server": {
+                                "name": "'+$Name+'",
+                                "imageRef": "'+$ImageSet+'", 
+                                "flavorRef": "'+$sizeSet+'"
+                                }
+                            }'
+                        Invoke-WebRequest -Uri https://servers.api.rackspacecloud.com/v1.0/010101/v2/$Tenant/servers -Method Post -ContentType "application/json" -Headers @{"X-Auth-Token" = $TokenSet;"X-Auth-Project-Id" = $VMName} -Body $Body 
                     }
                 }
                 default{}
