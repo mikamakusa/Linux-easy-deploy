@@ -33,8 +33,6 @@ For Cloudwatt
 - **Token** | **Tenant** | **VMName** | **Image** | **Size**  
 For Numergy  
 - **Token** | **Tenant** | **VMName** | **Image** | **Size**  
-For ArubaCloud  
-- **Username** | **Password** | **VMName** | **AdminPass** | **Region** | **Image** | **Size**  
 For Google  
 - **Key** | **VMName** | **Image** | **Region** | **Size** | **Project**  
 For Rackspace  

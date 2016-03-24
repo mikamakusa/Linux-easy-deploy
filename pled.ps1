@@ -275,21 +275,6 @@ function Win_Role_Deploy {
     if ((Get-WMIObject -Class Win32_OperatingSystem).Caption -match "Windows 2008") {return "Add-WindowsFeature"}
     else {return "Install-WindowsFeature"}
 }
-function xml-commandv4 ($header, $body) {
-    $location = (Get-Location).Path
-    $filePath = "$location\command.xml"
-    $xmlwriter = New-Object System.XMl.XmlTextWriter($filepath,$Null)
-    $xmlwriter.WriteRaw("$header")
-    $XmlWriter.WriteRaw("$Body")
-    $XmlWriter.WriteRaw("</soapenv:Envelope>")
-    $xmlWriter.Finalize
-    $xmlWriter.Close()
-}
-function ArubaAPI ($command, $result, $dc, $apiversion, $instruction) {
-    if ((Get-ChildItem "c:\Windows\System32") -notmatch "wget") {
-        wget.exe -O $result -q --post-file=$command --header "SOAPAction: https://api.computing.cloud.it/WsEndUser/IWsEndUser/$instruction" --header "Content-Type: text/xml;charset=UTF-8" --no-check-certificate https://api.$dc.computing.cloud.it/WsEndUser/$apiversion/WsEndUser.svc/soap11
-    }
-}
 ## Main function
 function PacMan {
     $Type = ((Import-Csv $file -Delimiter ";").Type)
@@ -597,48 +582,6 @@ function PacMan {
                         Invoke-WebRequest -Uri https://api2.numergy.com/$Nversion/$TenantID/servers -Method Post -Headers @{"ContentType" = "application/json; charset=utf-8";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body $Body
                     }
                 }
-                ### Tested but not ok ###
-                "Arubacloud" {
-                    foreach ($item in ((Import-Csv $file -Delimiter ";").VMName)) {
-                        $apiversion = "v2.8"
-                        $Username = ((Import-Csv $file -Delimiter ";").Username);$Password = ((Import-Csv $file -Delimiter ";").Password)
-                        $AdminPass = ((Import-Csv $file -Delimiter ";").AdminPass);$dcx = Get-Regions -file $file;$ImageSet = Get-ImageId -file $file;$SizeSet = Get-Size -file $file;$VMName = ((Import-Csv $file -Delimiter ";").VMName)
-                        if ((Get-WmiObject -Class Win32_OperatingSystem).Caption -match "Windows 7") {
-                            $SOAPHeader = "<soap:Envelope xmlns:arub='http://schemas.datacontract.org/2004/07/Aruba.Cloud.Provisioning.Entities' xmlns:soap='http://www.w3.org/2003/05/soap-envelope' xmlns:wsen='https://api.computing.cloud.it/WsEndUser'>
-                                <soap:Header>
-                                        <wsse:Security soap:mustUnderstand='true' xmlns:wsse='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd' xmlns:wsu='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'><wsse:UsernameToken wsu:Id='UsernameToken-D73AFF2E1B956DC7A7145854908826214'>
-                                        <wsse:Username>$Username</wsse:Username>
-                                        <wsse:Password Type='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText'>$Password</wsse:Password>
-                                        <wsse:Nonce EncodingType='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'>8vRx/zg0wCriFAUUPLcYdw==</wsse:Nonce>
-                                        <wsu:Created>2016-03-21T08:31:28.262Z</wsu:Created>
-                                    </wsse:UsernameToken>
-                                </wsse:Security>
-                            </soap:Header>
-                            "
-                            $BodyCreation = "<soap:Body>
-                                <wsen:SetEnqueueServerCreation>
-                                <wsen:server>
-                                <arub:AdministratorPassword>$AdminPass</arub:AdministratorPassword>
-                                <arub:Name>$VMName</arub:Name>
-                                <arub:OSTemplateId>$ImageSet</arub:OSTemplateId>
-                                <arub:SmartVMWarePackageID>$SizeSet</arub:SmartVMWarePackageID>
-                                </wsen:server>
-                                </wsen:SetEnqueueServerCreation>
-                            </soap:Body>
-                            "
-                            $headers = @{"SOAPAction" = "https://api.computing.cloud.it/WsEndUser/IWsEndUser/SetEnqueueServerCreation"}
-                            $instruction = "SetEnqueueServerCreation"
-                            xml-commandv4 -header $SOAPHeader -body $BodyCreation | ArubaAPI -command command.xml -result result.xml -dc $dcx -apiversion $apiversion -instruction $instruction
-                        }
-                        else {
-                            [xml]$SOAPBody = "<soap:Envelope xmlns:arub='http://schemas.datacontract.org/2004/07/Aruba.Cloud.Provisioning.Entities' xmlns:soap='http://www.w3.org/2003/05/soap-envelope' xmlns:wsen='https://api.computing.cloud.it/WsEndUser'><soap:Header><wsse:Security soap:mustUnderstand='true' xmlns:wsse='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd' xmlns:wsu='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'><wsse:UsernameToken wsu:Id='UsernameToken-D73AFF2E1B956DC7A7145854908826214'><wsse:Username>$Username</wsse:Username><wsse:Password Type='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText'>$Password</wsse:Password><wsse:Nonce EncodingType='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary'>8vRx/zg0wCriFAUUPLcYdw==</wsse:Nonce><wsu:Created>2016-03-21T08:31:28.262Z</wsu:Created></wsse:UsernameToken></wsse:Security></soap:Header><soap:Body><wsen:SetEnqueueServerCreation><wsen:server><arub:AdministratorPassword>$AdminPass</arub:AdministratorPassword><arub:Name>$VMName</arub:Name><arub:OSTemplateId>$ImageSet</arub:OSTemplateId><arub:SmartVMWarePackageID>$SizeSet</arub:SmartVMWarePackageID></wsen:server></wsen:SetEnqueueServerCreation></soap:Body>"
-                            $headers = @{"SOAPAction" = "https://api.computing.cloud.it/WsEndUser/IWsEndUser/SetEnqueueServerCreation"}
-                            [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $null
-                            Invoke-WebRequest -Uri https://api.$dcx.computing.cloud.it/WsEndUser/$apiversion/WsEndUser.svc/soap11 -Method Post -ContentType "text/xml; charset=utf-8" -headers $headers -Body $SOAPBody
-                        }
-                    }
-                }
-                ### Tested but not ok ###
                 "Google" {
                     foreach ($item in ((Import-Csv $file -Delimiter ";").VMName)) {
                         $Zone = Get-Regions -file $file;$ImageSet=Get-ImageId -file $file;$VMName = ((Import-Csv $file -Delimiter ";").VMName);$Project = ((Import-Csv $file -Delimiter ";").Project)
