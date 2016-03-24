@@ -42,11 +42,6 @@ function Unzip {
     [System.IO.Compression.ZipFile]::ExtractToDirectory($zipfile, $outpath)
 }
 ## Custom functions
-function Check_Wget {
-    if ((Get-ChildItem "c:\Windows\System32") -notmatch "wget") {
-    Invoke-WebRequest -Uri "https://eternallybored.org/misc/wget/current/wget64.exe" -OutFile "c:\Windows\System32\wget64.exe"
-    Rename-Item -Path "c:\Windows\System32\wget64.exe" -NewName "c:\Windows\System32\wget.exe"}
-}
 function Check_AWS_tools{
     if (((Get-WmiObject -Class Win32_OperatingSystem).Caption -match "Windows 2012") -or (((Get-WmiObject -Class Win32_OperatingSystem).Caption -match "Windows 2008") -and (($Host).Version).Major -match "5")) {
         if ((Get-Command -ListAvailable) -notmatch "AWSPowerShell") {
@@ -401,7 +396,11 @@ function PacMan {
                                 }
                                 else {(Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "curl -sSL https://get.docker.com/ | sh")}
                             }
-                            #"Firewall" {}
+                            "Firewall" {
+                                $sysctl = "services","systemctl"
+                                $fwall = "iptables","nftables","firewalld","shorewall"
+                                
+                            }
                             default {}
                         }
                     }
@@ -499,7 +498,7 @@ function PacMan {
                                         Install-ContainerImage -Name WindowsServerCore
                                     }
                                     if ((Get-NetIPConfiguration).Name -notmatch "Virtual Switch") {
-                                        New-VMSwitch -Name "Virtual Switch" -SwitchType NAT -NATSubnetAddress 172.16.0.0/12
+                                        New-VMSwitch -Name "Virtual Switch" -SwitchType NAT -NATSubnetAddress "172.16.0.0/12"
                                         New-NetNat -Name ContainerNat -InternalIPInterfaceAddressPrefix "172.16.0.0/12"
                                     }
                                     foreach ($item in ((Import-Csv $file -Delimiter ";").CName)) {
@@ -511,7 +510,38 @@ function PacMan {
                                 }
                                 else {return "Feature unavailable"}
                             }
-                            "Firewall" {}
+                            "Firewall" {
+                                $RAction = ((Import-Csv $file -Delimiter ";").RuleAction)
+                                switch ($RAction) {
+                                    "Create" {
+                                        foreach ($i in ((Import-Csv $file -Delimiter ";").RuleName)) {
+                                            $Direction = ((Import-Csv $file -Delimiter ";").Direction)
+                                            switch ($Direction) {
+                                                "in" {
+                                                    if ((Get-WmiObject -Class Win32_OperatingSystem).Caption -match "Microsoft Windows Server 2008 R2 Datacenter") {return "in"}
+                                                    else {return "Inbound"}
+                                                }
+                                                "out" {
+                                                    if ((Get-WmiObject -Class Win32_OperatingSystem).Caption -match "Microsoft Windows Server 2008 R2 Datacenter") {return "out"}
+                                                    else {return "Outbound"}
+                                                }
+                                            }
+                                            $RuleName = ((Import-Csv $file -Delimiter ";").RuleName);$Protocol = ((Import-Csv $file -Delimiter ";").Protocol)
+                                            $Port = ((Import-Csv $file -Delimiter ";").Action);$FAction = ((Import-Csv $file -Delimiter ";").Faction)
+                                            $PName = ((Import-Csv $file -Delimiter ";").ProfileName)
+                                            if ((Get-WmiObject -Class Win32_OperatingSystem).Caption -match "Microsoft Windows Server 2008 R2 Datacenter") {
+                                                netsh advfirewall firewall add rule name=$RuleName protocol=$Protocol dir=$Direction action=$Action localport=$Port
+                                            }
+                                            else {
+                                                New-NetFirewallRule -DisplayName $RuleName -Profile $PName -Direction $Direction -Protocol $Protocol -Action $FAction -Enabled True -Port $Port
+                                            }
+                                        }
+                                    }
+                                    "Remove" {}
+                                    "Modify" {}
+                                    default {} 
+                                }
+                            }
                             default {}
                         }
                     }

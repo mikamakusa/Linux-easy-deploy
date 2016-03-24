@@ -3,7 +3,7 @@
 Deploy : 
 
 - Packages and Docker Containers on Linux distributions (create Firewall rules - work in progress)
-- Roles, services and softwares on Windows Server (And Windows Containers for Windows 2016) (create firewall rules - available and tested in another script)
+- Roles, services and softwares on Windows Server (And Windows Containers for Windows 2016)  
 - Cloud Instances (on Cloud Providers Platforms) 
 
 # v1.3
@@ -25,7 +25,7 @@ Cloud Providers supported : CloudWatt, Numergy, Amazon WebServices, Digital Ocea
 - **Part** : **Roles** (Domain | Certificate | Federation | Application Server | Network | Print | Remote | Deployment | Web Server)      
 - **Part** : **Softwares** (Exchange | Sharepoint | Skype)  
 - **Part** : **Containers** (For Windows 2016)  
-- **Part** : **Firewall** (WIP)  
+- **Part** : **Firewall** (Direction | RuleName | Protocol | Port | FAction - for Firewall Action | PName - for Profile Name)  
 - **Type** : **Provider** (Name)  
 - **Provider** : **Name** (AWS | DigitalOcean | Cloudwatt | Numergy | Google | Rackspace)  
 
