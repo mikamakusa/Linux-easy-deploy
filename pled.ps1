@@ -4,7 +4,7 @@ $version = "1.3"
     if ((Get-Command -All) -notmatch "New-SSHSession"){
         iex (New-Object Net.WebClient).DownloadString("https://gist.github.com/darkoperator/6152630/raw/c67de4f7cd780ba367cccbc2593f38d18ce6df89/instposhsshdev")
     } 
-#Import-Module Posh-SSH 
+Import-Module Posh-SSH 
 ## Import predefined functions
 function Install-MSIFile {
     [CmdletBinding()]
@@ -254,8 +254,6 @@ function Get-Token ($file) {
             $Uri = "https://eu.api.ovh.com/1.0/auth/credential"
             Invoke-WebRequest -Uri $Uri -ContentType "application/json" -Headers @{"X-Ovh-Application" = $AppKey} -Method Post -Body '{"accessRules":[{"method": "GET","path": "/*"}],"redirection":"https://www.mywebsite.com/"}'
         }
-        "Google" {
-        }
         "Rackspace" {
             $Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
             $Username = ((Import-Csv -Delimiter ";").Username)
@@ -397,9 +395,27 @@ function PacMan {
                                 else {(Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "curl -sSL https://get.docker.com/ | sh")}
                             }
                             "Firewall" {
-                                $sysctl = "services","systemctl"
-                                $fwall = "iptables","nftables","firewalld","shorewall"
-                                
+                                 $RAction = ((Import-Csv $file -Delimiter ";").RuleAction)
+                                 switch ($Action) {
+                                     "Create" {
+                                         $Filter = ((Import-Csv $file -Delimiter ";").Filter);$Policy = ((Import-Csv $file -Delimiter ";").Policy)
+                                         $Protocol = ((Import-Csv $file -Delimiter ";").Protocol);$Port = ((Import-Csv $file -Delimiter ";").Port)
+                                         foreach ($item in ((Import-Csv $file -Delimiter ";").RuleNumber)) {
+                                             Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "iptables -A $Filter -p $Protocol -i $Interface --dport $Port -j $Policy"
+                                             Invoke-SShCommand -SessionId ((Get-SSHSession).SessionId) -Command "iptables-save -c"
+                                         }
+                                     }
+                                     "Remove" {
+                                         $RNum = ((Import-Csv $file -Delimiter ";").RNum)
+                                         foreach ($item in $RNum) {
+                                             Invoke-SShCommand -SessionId ((Get-SSHSession).SessionId) -Command "iptables -L $RNum"
+                                         }
+                                     }
+                                     "Intialize" {
+                                         Invoke-SShCommand -SessionId ((Get-SSHSession).SessionId) -Command "iptables -F"
+                                     }
+                                     default {}
+                                 }
                             }
                             default {}
                         }
