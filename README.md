@@ -12,9 +12,11 @@ Deploy :
 Linux distributions supported : Ubuntu, Debian, CentOS/Fedora/Red Hat, Suse, Mandriva, Slackware, Vector, Zenwalk, Sabayon, ArchLinux, rPath/Foresight, Alpine, Gentoo, Lunar, Source Mage, NixOS, Void  
 Cloud Providers supported : CloudWatt, Numergy, Amazon WebServices, Digital Ocean, Google Compute Engine  
 
-## Keywords needed
+## Keywords 
 - **Type** : Host | Provider  
 - **Host** : OS (Linux | Windows)    
+
+## Hosts Keywords
 - **OS** : **Linux** (Package | Docker | Firewall (wip))     
 - **Linux** : **Package** \ **Action** (Install | Remove | Search | UpSystem | UpPackage)  
 - **Linux** : **Docker** \ **Action** (Deploy | Build | Stop | Remove)
@@ -26,17 +28,24 @@ Cloud Providers supported : CloudWatt, Numergy, Amazon WebServices, Digital Ocea
 - **Part** : **Firewall** (WIP)  
 - **Type** : **Provider** (Name)  
 - **Provider** : **Name** (AWS | DigitalOcean | Cloudwatt | Numergy | Google | Rackspace)  
+
+## Providers Keywords
 For AWS  
 - **InstanceTag** | **Image** | **Key** | **SGroup**  
+
 For DigitalOcean  
 - **Token** | **VMName** | **Image** | **Region** | **Size**  
-- It's possible to create more than one droplet with the **same imageId** 
+(It's possible to create up to 5 droplet with the **same imageId**)  
+
 For Cloudwatt  
 - **Token** | **Tenant** | **VMName** | **Image** | **Size**  
+
 For Numergy  
 - **Token** | **Tenant** | **VMName** | **Image** | **Size**  
+
 For Google  
 - **Key** | **VMName** | **Image** | **Region** | **Size** | **Project**  
+
 For Rackspace  
 - **Tenant** | **APIKey** | **VMName** | **Username** | **Password** | **Image** | **Size** | **Token** 
 
