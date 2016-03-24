@@ -2,15 +2,15 @@
 
 Deploy : 
 
-- Packages and Docker Container on Linux distributions
-- Roles and services on Windows Server (And Windows Containers for Windows 2016)
-- Cloud Instances on Cloud Providers Platforms) 
+- Packages and Docker Containers on Linux distributions (create Firewall rules - work in progress)
+- Roles, services and softwares on Windows Server (And Windows Containers for Windows 2016) (create firewall rules - available and tested in another script)
+- Cloud Instances (on Cloud Providers Platforms) 
 
 # v1.3
 
 ## Deployment on Windows Server (2008 R2 - 2012 R2 - 2016) - Linux - Cloud Providers  
 Linux distributions supported : Ubuntu, Debian, CentOS/Fedora/Red Hat, Suse, Mandriva, Slackware, Vector, Zenwalk, Sabayon, ArchLinux, rPath/Foresight, Alpine, Gentoo, Lunar, Source Mage, NixOS, Void  
-Cloud Providers supported : ArubaCloud, CloudWatt, Numergy, Amazon WebServices, Digital Ocean, Google Compute Engine  
+Cloud Providers supported : CloudWatt, Numergy, Amazon WebServices, Digital Ocean, Google Compute Engine  
 
 ## Keywords needed
 - **Type** : Host | Provider  
@@ -18,17 +18,19 @@ Cloud Providers supported : ArubaCloud, CloudWatt, Numergy, Amazon WebServices, 
 - **OS** : **Linux** (Package | Docker | Firewall (wip))     
 - **Linux** : **Package** \ **Action** (Install | Remove | Search | UpSystem | UpPackage)  
 - **Linux** : **Docker** \ **Action** (Deploy | Build | Stop | Remove)
+- **Linux** : **Firewall** (WIP)
 - **Os** : **Windows** \ **Part** (Roles | Software | Containers | Firewall)    
 - **Part** : **Roles** (Domain | Certificate | Federation | Application Server | Network | Print | Remote | Deployment | Web Server)      
 - **Part** : **Softwares** (Exchange | Sharepoint | Skype)  
-- **Part** : **Containers** (Fore Windows 2016)  
+- **Part** : **Containers** (For Windows 2016)  
 - **Part** : **Firewall** (WIP)  
 - **Type** : **Provider** (Name)  
-- **Provider** : **Name** (AWS | DigitalOcean | Cloudwatt | Numergy | Arubacloud | Google | Rackspace)  
+- **Provider** : **Name** (AWS | DigitalOcean | Cloudwatt | Numergy | Google | Rackspace)  
 For AWS  
 - **InstanceTag** | **Image** | **Key** | **SGroup**  
 For DigitalOcean  
-- **VMName** | **Image** | **Region** | **Size**  
+- **Token** | **VMName** | **Image** | **Region** | **Size**  
+- It's possible to create more than one droplet with the **same imageId** 
 For Cloudwatt  
 - **Token** | **Tenant** | **VMName** | **Image** | **Size**  
 For Numergy  

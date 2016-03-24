@@ -542,23 +542,29 @@ function PacMan {
                         }
                     }
                 }
-                "DigitalOcean" { 
-                    foreach ($item in ((Import-Csv $file -Delimiter ";").VMName)) {
-                        $Token = ((Import-Csv $file -Delimiter ";").Token)
+                "DigitalOcean" {
+                    if (((Import-Csv .\Classeur1.csv -Delimiter ";").Image) | select -Unique) {
                         $VMName = ((Import-Csv $file -Delimiter ";").VMName)
+                        $Token = ((Import-Csv $file -Delimiter ";").Token)
                         $ImageSet = Get-ImageId -file $file;$RegionSet = Get-Regions -file $file;$SizeSet = Get-Size -file $file
-                        $body = '{
-                          "name": "'+$VMName+'",
-                          "region": "'+$RegionSet+'",
-                          "size": "'+$SizeSet+'",
-                          "image": "'+$ImageSet+'",
-                          "ssh_keys": null,
-                          "backups": false,
-                          "ipv6": true,
-                          "user_data": null,
-                          "private_networking": null
-                        }'
-                        Invoke-WebRequest -Uri https://api.digitalocean.com/v2/droplets -Method POST -Headers @{"Content-Type" = "application/json";"Authorization" = "Bearer $Token"} -Body $body  
+                        switch (((import-csv .\Classeur1.csv -Delimiter ";").VMName).Count) {
+                                1 {$body = '{"name": "'+$VMName+'","region": "'+$RegionSet+'","size": "'+$SizeSet+'","image": "'+$ImageSet+'","ssh_keys": null,"backups": false,"ipv6": true,"user_data": null,"private_networking": null}'}
+                                2 {$body = '{"name": ["'+$VMName[0]+'","'+$VMName[1]+'"],"region": "'+$RegionSet+'","size": "'+$SizeSet+'","image": "'+$ImageSet+'","ssh_keys": null,"backups": false,"ipv6": true,"user_data": null,"private_networking": null}'}
+                                3 {$body = '{"name": ["'+$VMName[0]+'","'+$VMName[1]+'","'+$VMName[2]+'"],"region": "'+$RegionSet+'","size": "'+$SizeSet+'","image": "'+$ImageSet+'","ssh_keys": null,"backups": false,"ipv6": true,"user_data": null,"private_networking": null}'}
+                                4 {$body = '{"name": ["'+$VMName[0]+'","'+$VMName[1]+'","'+$VMName[2]+'","'+$VMName[3]+'"],"region": "'+$RegionSet+'","size": "'+$SizeSet+'","image": "'+$ImageSet+'","ssh_keys": null,"backups": false,"ipv6": true,"user_data": null,"private_networking": null}'}
+                                5 {$body = '{"name": ["'+$VMName[0]+'","'+$VMName[1]+'","'+$VMName[2]+'","'+$VMName[3]+'","'+$VMName[4]+'"],"region": "'+$RegionSet+'","size": "'+$SizeSet+'","image": "'+$ImageSet+'","ssh_keys": null,"backups": false,"ipv6": true,"user_data": null,"private_networking": null}'}
+                                default {}
+                            }
+                        Invoke-WebRequest -Uri https://api.digitalocean.com/v2/droplets -Method POST -Headers @{"Content-Type" = "application/json";"Authorization" = "Bearer $Token"} -Body $body 
+                        }
+                    else {
+                        foreach ($item in ((Import-Csv $file -Delimiter ";").VMName)) {
+                            $VMName = ((Import-Csv $file -Delimiter ";").VMName)
+                            $Token = ((Import-Csv $file -Delimiter ";").Token)
+                            $ImageSet = Get-ImageId -file $file;$RegionSet = Get-Regions -file $file;$SizeSet = Get-Size -file $file
+                            $body = '{"name": "'+$VMName+'","region": "'+$RegionSet+'","size": "'+$SizeSet+'","image": "'+$ImageSet+'","ssh_keys": null,"backups": false,"ipv6": true,"user_data": null,"private_networking": null}'
+                            Invoke-WebRequest -Uri https://api.digitalocean.com/v2/droplets -Method POST -Headers @{"Content-Type" = "application/json";"Authorization" = "Bearer $Token"} -Body $body  
+                        }
                     }
                 }
                 "Cloudwatt" {
