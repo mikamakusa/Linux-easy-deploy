@@ -18,15 +18,20 @@ Cloud Providers supported : CloudWatt, Numergy, Amazon WebServices, Digital Ocea
 
 ## Hosts Keywords
 - **OS** : **Linux** (Package | Docker | Firewall (wip))     
-- **Linux** : **Package** \ **Action** (Install | Remove | Search | UpSystem | UpPackage)  
-- **Linux** : **Docker** \ **Action** (Deploy | Build | Stop | Remove)
-- **Linux** : **Firewall** \ **Action** (Create | Remove | Initialize)
-Filter - Protocol - Policy - Port - RNum (only for Romve Action)
+- **Linux** : **Package** \ **Action** (Install | Remove | Search | UpSystem | UpPackage)    
+- **Linux** : **Docker** \ **Action** (Deploy | Build | Stop | Remove)  
+- **Linux** : **Firewall** \ **Action** (Create | Remove | Initialize)  
+Filter - Protocol - Policy - Port - RNum (only for Remove Action)  
+- **Linux** : **Rkt** (Install | Deploy | Remove)  
+Install : From | Image | Volume | Network | Hostname | Mount  
+- **Linux** : **Weave** (Docker Network Layer)  
+- **Linux** : **Cluster** \ **Name** (Swarm - Docker Cluster | Fleet | Mesos)    
 - **Os** : **Windows** \ **Part** (Roles | Software | Containers | Firewall)    
-- **Part** : **Roles** (Domain | Certificate | Federation | Application Server | Network | Print | Remote | Deployment | Web Server)      
+- **Part** : **Roles** (Domain | Certificate | Federation | Application Server | Network | Print | Remote | Deployment | Web Server)        
 - **Part** : **Softwares** (Exchange | Sharepoint | Skype)  
 - **Part** : **Containers** (For Windows 2016)  
 - **Part** : **Firewall** (Direction | RuleName | Protocol | Port | FAction - for Firewall Action | PName - for Profile Name)  
+- **Part** : **Cluster** (Work in Progress)
 - **Type** : **Provider** (Name)  
 - **Provider** : **Name** (AWS | DigitalOcean | Cloudwatt | Numergy | Google | Rackspace)  
 

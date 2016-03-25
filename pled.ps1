@@ -362,7 +362,7 @@ function PacMan {
                                 }
                             }
                             "Docker" {
-                                if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker").ExitStatus -notmatch "127")) {          
+                                if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker").ExitStatus -notmatch "127")) {
                                     $Action = (Import-Csv $file -Delimiter ";").Action
                                     switch ($Action) {
                                         "Deploy"{
@@ -379,7 +379,7 @@ function PacMan {
                                             $PPublish = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").PortsPublish)){}else{"-P=["+((Import-Csv $file -Delimiter ";").PortsPublish)+']'}
                                             $Volume = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Volumes)){}else{"-v "+((Import-Csv $file -Delimiter ";").Volumes)}
                                             $Link = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Links)){}else{"--link "+((Import-Csv $file -Delimiter ";").Links)}
-                                            Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker run" $Restart $Mode $PExpose $PPublish $AddHost $Network $DNS $CName $Link $Volume $EnPoint $Image $CMD
+                                            Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker run $Restart $Mode $PExpose $PPublish $AddHost $Network $DNS $CName $Link $Volume $EnPoint $Image $CMD"
                                         }
                                         "Build" {
                                             Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "Docker Build -t "+((Import-Csv $file -Delimiter ";").IName)+" ."
@@ -390,9 +390,55 @@ function PacMan {
                                         "Remove" {
                                             Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker rm "+((Import-Csv $file -Delimiter ";").CId)
                                         }
+                                        default {}
                                     }
                                 }
                                 else {(Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "curl -sSL https://get.docker.com/ | sh")}
+                            }
+                            "Rkt" {
+                                switch ((Import-Csv $file -Delimiter ";").Action) {
+                                    "Install" {Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "cd /home/ && wget https://github.com/coreos/rkt/releases/download/v0.9.0/rkt-v0.9.0.tar.gz && tar xzf rkt-v0.9.0.tar.gz"}
+                                    "Deploy" {
+                                        $From = if ((Import-Csv $file -Delimiter ";") -match "Docker") {"--insecure-options=image"}else{}
+                                        $Image = if ($From -match "Docker") {return "docker://"+((Import-Csv $file -Delimiter ";").Image)}else {return ((Import-Csv $file -Delimiter ";").Image)}
+                                        $Volume = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Volumes)){}else{"--volume "+((Import-Csv $file -Delimiter ";").Volumes)}
+                                        $Network = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Network)){}else{"--net="+((Import-Csv $file -Delimiter ";").Network)}
+                                        $Hostname = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Hostname)){}else{"--hostname "+((Import-Csv $file -Delimiter ";").Hostname)}
+                                        $Mount = if ([string]::IsNullOrWhiteSpace((Import-Csv $file -Delimiter ";").Mount)){}else{"--mount "+((Import-Csv $file -Delimiter ";").Mount)}
+                                        Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "rkt run --interactive $Image $From $Volume $Network $Hostname $Mount"
+                                    }
+                                    "Remove" {Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "rkt gc --grace-preiod=0"}
+                                } 
+                            }
+                            "Weave" {
+                                if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "weave").ExitStatus -match "127")) {
+                                    Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "curl -L git.io/weave -o /usr/local/bin/weave"
+                                    Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "chmod +x /usr/local/bin/weave"
+                                    Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "weave launch"
+                                }
+                            }
+                            "Cluster" {
+                                switch ((Import-Csv $file -Delimiter ";").CName) {
+                                    "Swarm" {
+                                        switch ((Import-Csv $file -Delimiter ";").SWRole) {
+                                            "Manager" {
+                                                Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "docker pull swarm:latest"
+                                                Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "docker -H tcp://0.0.0.0:$SwarmPort -H unix:///var/run/docker.sock -d &"
+                                                $SwarmToken = (Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker run swarm create").Output
+                                                $IP = (Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "hostname -i")
+                                                Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker run swarm join"
+                                            }
+                                            "Node" {
+                                                Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "docker pull swarm:latest"
+                                                Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "docker -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock -d &"
+                                                $IP = (Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "hostname -i")
+                                                Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "docker run swan join --addr=$IP token://$SwarmToken"
+                                            }
+                                        }
+                                    }
+                                    "Fleet" {}
+                                    "Mesos" {}
+                                }
                             }
                             "Firewall" {
                                  $RAction = ((Import-Csv $file -Delimiter ";").RuleAction)
@@ -558,6 +604,7 @@ function PacMan {
                                     default {} 
                                 }
                             }
+                            "Cluster" {}
                             default {}
                         }
                     }
