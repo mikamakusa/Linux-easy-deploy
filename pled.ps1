@@ -1,5 +1,5 @@
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-$version = "1.3"
+$version = "1.3.5"
 ## Import SSH Module
     if ((Get-Command -All) -notmatch "New-SSHSession"){
         iex (New-Object Net.WebClient).DownloadString("https://gist.github.com/darkoperator/6152630/raw/c67de4f7cd780ba367cccbc2593f38d18ce6df89/instposhsshdev")
@@ -268,6 +268,64 @@ function Win_Role_Deploy {
     if ((Get-WMIObject -Class Win32_OperatingSystem).Caption -match "Windows 2008") {return "Add-WindowsFeature"}
     else {return "Install-WindowsFeature"}
 }
+function Check_wget_GNU {
+    if ((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "wget").ExitStatus -match "127") {
+        $packman = "apt-get","zypper","yum","urpmi","slackpkg","slapt-get","netpkg","equo","pacman","conary","apk add","emerge","lin","cast","niv-env","xpbs","snappy"
+        foreach ($i in $packman) {
+            if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$i").ExitStatus -notmatch "127")) {
+                switch ($i) {
+                    "apt-get" {Invoke-SSHCommand -Session ((Get-SSHSession).SessionId) -Command "$i install -y wget"}
+                    "yum" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i install -y wget"}
+                    "zypper" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i install -y wget"}
+                    "urpmi" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i -y wget"}
+                    "slackpkg" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i install -y wget"}
+                    "slapt-get" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i --install -y wget"}
+                    "netpkg" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i -y wget"}
+                    "equo" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i install -y wget"}
+                    "pacman" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i -S -y wget"}
+                    "conary" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i update -y wget"}
+                    "apk add" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i -y wget"}
+                    "emerge" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i -y wget"}
+                    "lin" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i -y wget"}
+                    "cast" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i -y wget"}
+                    "niv-env" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i -i -y wget"}
+                    "xpbs" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i-install -y wget"}
+                    "snappy" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i install -y wget"}
+                    default {}
+                }
+            }
+        }
+    }
+}
+function Check_Unzip_GNU {
+    if ((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "wget").ExitStatus -match "127") {
+        $packman = "apt-get","zypper","yum","urpmi","slackpkg","slapt-get","netpkg","equo","pacman","conary","apk add","emerge","lin","cast","niv-env","xpbs","snappy"
+        foreach ($i in $packman) {
+            if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$i").ExitStatus -notmatch "127")) {
+                switch ($i) {
+                    "apt-get" {Invoke-SSHCommand -Session ((Get-SSHSession).SessionId) -Command "$i install -y unzip"}
+                    "yum" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i install -y unzip"}
+                    "zypper" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i install -y unzip"}
+                    "urpmi" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i -y unzip"}
+                    "slackpkg" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i install -y unzip"}
+                    "slapt-get" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i --install -y unzip"}
+                    "netpkg" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i -y unzip"}
+                    "equo" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i install -y unzip"}
+                    "pacman" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i -S -y unzip"}
+                    "conary" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i update -y unzip"}
+                    "apk add" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i -y unzip"}
+                    "emerge" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i -y unzip"}
+                    "lin" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i -y unzip"}
+                    "cast" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i -y unzip"}
+                    "niv-env" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i -i -y unzip"}
+                    "xpbs" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i-install -y unzip"}
+                    "snappy" {Invoke-SSHCommand -Session ((Get-SShSession).SessionId) -Command "$i install -y unzip"}
+                    default {}
+                }
+            }
+        }
+    }
+}
 ## Main function
 function PacMan {
     $Type = ((Import-Csv $file -Delimiter ";").Type)
@@ -401,7 +459,10 @@ function PacMan {
                                             }
                                             "Rkt" {
                                                 switch ((Import-Csv $file -Delimiter ";").Action) {
-                                                "Install" {Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "cd /home/ && wget https://github.com/coreos/rkt/releases/download/v0.9.0/rkt-v0.9.0.tar.gz && tar xzf rkt-v0.9.0.tar.gz"}
+                                                "Install" {
+                                                    Check_wget_GNU
+                                                    Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "cd /home/ && wget https://github.com/coreos/rkt/releases/download/v0.9.0/rkt-v0.9.0.tar.gz && tar xzf rkt-v0.9.0.tar.gz"
+                                                }
                                                 "Deploy" {
                                                     $From = if ((Import-Csv $file -Delimiter ";") -match "Docker") {"--insecure-options=image"}else{}
                                                     $Image = if ($From -match "Docker") {return "docker://"+((Import-Csv $file -Delimiter ";").Image)}else {return ((Import-Csv $file -Delimiter ";").Image)}
@@ -458,21 +519,31 @@ function PacMan {
                                             "Swarm" {
                                                 switch ((Import-Csv $file -Delimiter ";").SWRole) {
                                                     "Manager" {
+                                                        $SwarmPort = ((Import-Csv $file -Delimiter ";").SwarmPort)
                                                         Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "docker pull swarm:latest"
                                                         Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "docker -H tcp://0.0.0.0:$SwarmPort -H unix:///var/run/docker.sock -d &"
-                                                        $SwarmToken = (Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker run swarm create").Output
-                                                        $IP = (Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "hostname -i")
+                                                        $IPmaster = (Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "hostname -i")
+                                                        $SwarmToken = (Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker -H tcp://"$IPmaster+":"+$SwarmPort+"swarm create").Output
                                                         Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "docker run swarm join"
                                                     }
                                                     "Node" {
+                                                        $SwarmPort = ((Import-Csv $file -Delimiter ";").SwarmPort)
                                                         Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "docker pull swarm:latest"
-                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "docker -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock -d &"
-                                                        $IP = (Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "hostname -i")
-                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "docker run swan join --addr=$IP token://$SwarmToken"
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "docker -H tcp://$IPclient:2375 -H unix:///var/run/docker.sock -d &"
+                                                        $IPclient = (Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "hostname -i")
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "docker -H tcp://"+$IPclient+":"+$SwarmPort+"run swan join --addr=$IPmaster token://$SwarmToken"
+                                                    }
+                                                    "Manager" {
+                                                        $SwarmPort = ((Import-Csv $file -Delimiter ";").SwarmPort)
+                                                        $IPmaster = (Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "hostname -i")
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "docker -H tcp://"+$IPmaster+":"+$SwarmPort+" run -d -p 5000:5000 swarm manage token://$SwarmToken"
                                                     }
                                                 }
                                             }
-                                            "Serf" {}
+                                            "Serf" {
+                                                Check_wget_GNU | Check_Unzip_GNU
+                                                Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command ""
+                                            }
                                             "Fleet" {}
                                             "Mesos" {}
                                             default {}
@@ -480,7 +551,27 @@ function PacMan {
                                     }
                                     "Discovery" {
                                         switch ((Import-Csv $file -Delimiter ";").ToolName) {
-                                            "Consul" {}
+                                            "Consul" {
+                                                switch ((Import-Csv $file -Delimiter ";").SWRole) {
+                                                    "Server" {
+                                                        Check_wget_GNU | Check_Unzip_GNU
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "wget https://releases.hashicorp.com/consul/0.6.1/consul_0.6.1_linux_amd64.zip && unzip consul_0.6.1_linux_amd64.zip -d /usr/local/bin/consul"
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command '"echo "PATH=$PATH:/usr/local/bin/consul" >> /root/.bashrc"'
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "wget https://releases.hashicorp.com/consul/0.6.4/consul_0.6.4_web_ui.zip && unzip consul_0.6.4_web_ui.zip -d /home/"
+                                                        $IPconsulser = (Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "hostname -i")
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "consul agent -data-dir consul -server -bootstrap -client $IPconsulser -advertise $IPconsulser -ui-dir /home/web_ui/ &"
+                                                    }
+                                                    "Agent" {
+                                                        Check_wget_GNU | Check_Unzip_GNU
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "wget https://releases.hashicorp.com/consul/0.6.1/consul_0.6.1_linux_amd64.zip && unzip consul_0.6.1_linux_amd64.zip -d /usr/local/bin/consul"
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command '"echo "PATH=$PATH:/usr/local/bin/consul" >> /root/.bashrc"'
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "mkdir /home/consul/service"
+                                                        $IPconsulcli = (Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "hostname -i")
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "consul agent -data-dir /root/consul -client $IPconsulcli -advertise $IPconsulcli -node webserver -config-dir /home/consul/service -join $IPconsulser"
+                                                    }
+                                                }
+                                                
+                                            }
                                             "etcd" {}
                                             default {}   
                                         }                                       

@@ -2,11 +2,12 @@
 
 Deploy : 
 
-- Packages and Docker Containers on Linux distributions (create Firewall rules - work in progress)
+- Packages on Linux distributions (create Firewall rules - already functionnal for simple rules but work in progress)
+- Tools such as Containers (Docker & Rkt), Network layers for containers (Weave & Flannel), Cluster (Swarm for the moment, but work in progress for Mesos, Serf and Fleet) and Service Discovery (Consul & etcd)
 - Roles, services and softwares on Windows Server (And Windows Containers for Windows 2016)  
 - Cloud Instances (on Cloud Providers Platforms) 
 
-# v1.3
+# v1.3.5
 
 ## Deployment on Windows Server (2008 R2 - 2012 R2 - 2016) - Linux - Cloud Providers  
 Linux distributions supported : Ubuntu, Debian, CentOS/Fedora/Red Hat, Suse, Mandriva, Slackware, Vector, Zenwalk, Sabayon, ArchLinux, rPath/Foresight, Alpine, Gentoo, Lunar, Source Mage, NixOS, Void  
