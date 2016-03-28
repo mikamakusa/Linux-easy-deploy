@@ -517,7 +517,7 @@ function PacMan {
                                     "Cluster" {
                                         switch ((Import-Csv $file -Delimiter ";").ToolName) {
                                             "Swarm" {
-                                                switch ((Import-Csv $file -Delimiter ";").SWRole) {
+                                                switch ((Import-Csv $file -Delimiter ";").ToolRole) {
                                                     "Manager" {
                                                         $SwarmPort = ((Import-Csv $file -Delimiter ";").SwarmPort)
                                                         Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "docker pull swarm:latest"
@@ -538,11 +538,32 @@ function PacMan {
                                                         $IPmaster = (Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "hostname -i")
                                                         Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "docker -H tcp://"+$IPmaster+":"+$SwarmPort+" run -d -p 5000:5000 swarm manage token://$SwarmToken"
                                                     }
+                                                    defalut {}
                                                 }
                                             }
                                             "Serf" {
-                                                Check_wget_GNU | Check_Unzip_GNU
-                                                Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command ""
+                                                switch ((Import-Csv $file -Delimiter ";").ToolRole) {
+                                                    "Manager" {
+                                                        Check_wget_GNU | Check_Unzip_GNU
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "wget https://releases.hashicorp.com/serf/0.7.0/serf_0.7.0_linux_amd64.zip && unzip serf_0.7.0_linux_amd64.zip -d /usr/local/bin/serf"
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command '"echo "PATH=$PATH:/usr/local/bin/serf" >> /root/.bashrc"'
+                                                        $hostname = (Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "hostname")
+                                                        $IPmaster = (Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "hostname -i") 
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "touch /home/serf/event.sh"
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "serf agent -log-level=debug -event-handler=./home/serf/event.sh -node=$hostname -bind="+$IPmaster+":7496 -profile=wan &"
+                                                    }
+                                                    "Node" {
+                                                        Check_wget_GNU | Check_Unzip_GNU
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "wget https://releases.hashicorp.com/serf/0.7.0/serf_0.7.0_linux_amd64.zip && unzip serf_0.7.0_linux_amd64.zip -d /usr/local/bin/serf"
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command '"echo "PATH=$PATH:/usr/local/bin/serf" >> /root/.bashrc"'
+                                                        $hostname = (Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "hostname")
+                                                        $IPnode = (Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "hostname -i") 
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "touch /home/serf/event.sh"
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "serf agent -log-level=debug -event-handler=./home/serf/event.sh -node=$hostname -bind="+$IPnode+":7496 -rpc-addr=127.0.0.1:7373 -profile=wan &"
+                                                        Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "serf join "+$IPmaster+":7496"
+                                                    }
+                                                    default {}
+                                                }
                                             }
                                             "Fleet" {}
                                             "Mesos" {}
@@ -552,7 +573,7 @@ function PacMan {
                                     "Discovery" {
                                         switch ((Import-Csv $file -Delimiter ";").ToolName) {
                                             "Consul" {
-                                                switch ((Import-Csv $file -Delimiter ";").SWRole) {
+                                                switch ((Import-Csv $file -Delimiter ";").ToolRole) {
                                                     "Server" {
                                                         Check_wget_GNU | Check_Unzip_GNU
                                                         Invoke-SSHComand -SessionId ((Get-SSHSession).SessionId) -Command "wget https://releases.hashicorp.com/consul/0.6.1/consul_0.6.1_linux_amd64.zip && unzip consul_0.6.1_linux_amd64.zip -d /usr/local/bin/consul"
@@ -824,7 +845,6 @@ function PacMan {
                     foreach ($item in ((Import-Csv $file -Delimiter ";").VMName)) {
                         $Zone = Get-Regions -file $file;$ImageSet=Get-ImageId -file $file;$VMName = ((Import-Csv $file -Delimiter ";").VMName);$Project = ((Import-Csv $file -Delimiter ";").Project)
                         $SizeSet = Get-Size -file $file;$Key = ((Import-Csv $file -Delimiter ";").Key)
-                        $headers = "@{'Content-Type': 'application/x-www-form-urlencoded'}"
                         $Body = '{
                                 "name": "'+$VMName+'",
                                 "machineType": "'+$SizeSet+'",
