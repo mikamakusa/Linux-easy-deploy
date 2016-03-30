@@ -2,6 +2,7 @@ import csv
 import spur
 import os
 import json
+import boto.ec2
 
 def PacMan(package):
     packman = "apt-get","zypper","yum","urpmi","slackpkg","slapt-get","netpkg","equo","pacman","conary","apk add","emerge","lin","cast","niv-env","xpbs","snappy"
@@ -97,6 +98,12 @@ def GetSize(Size):
         elif "large" in row[5]: return "5"
         elif "xl" in row[5]: return "6"
         elif "xxl" in row[5]: return "7"
+    elif "Amazon" in row[1]:
+        if "small" in row[5]: return "t1.micro"
+        elif "medium" in row[5]: return "m1.small"
+        elif "large" in row[5]: return "m1.medium"
+        elif "xl" in row[5]: return "m1.large"
+        elif "xxl" in row[5]: return "m1.xlarge"
 
 def GetRegions(Region):
     if "DigitalOcean" in row[1]:
@@ -109,7 +116,12 @@ def GetRegions(Region):
         if "Asia" in row[5]: return "asia-east1-a"
         elif "Europe" in row[5]: return "europe-west1-b"
         elif "US" in row[5]: return "us-central1-a"
-
+    elif "Amazon" in row[1]:
+        if "Europe" in row[5]: return "eu-west-1"
+        elif "US" in row[5]: return "us-east-1"
+        elif "Asia" in row[5]: return "ap-northeast-1"
+        elif "South America" in row[5]: return "sa-east-1"
+        
 file = input ("fichier d'inventaire :")
 
 f = csv.reader(open(file), delimiter=";")
@@ -138,6 +150,12 @@ for row in f:
             Region = row[4]
             Size = row[5]
             VMName = row[6]
+            RegionSet = GetRegions(Region)
+            SizeSet = GetSize(Size)
+            ImageSet = GetImageId(Image)
+            conn = boto.ec2.connect_to_region("%s"%RegionSet)
+            key = ec2.create_key_pair('%s'%Token)
+            conn.run_instances('%s'%ImageSet,key_name='%s'%key,instance_type='%s'%SizeSet,security_groups=['%s'%key])
         elif "DigitalOcean" in row[1]:
             Token = row[2]
             Image = row[3]
