@@ -1,6 +1,7 @@
 import csv
 import spur
 import os
+import json
 
 def PacMan(package):
     packman = "apt-get","zypper","yum","urpmi","slackpkg","slapt-get","netpkg","equo","pacman","conary","apk add","emerge","lin","cast","niv-env","xpbs","snappy"
@@ -126,8 +127,9 @@ for row in f:
                 password = passw,
                 port = sshport
             )
-            package = row[5]
-            PacMan (package)
+            for p in row[5]:
+                package = row[5]
+                PacMan (package)
 
     else:
         if "Amazon" in row[1]:
@@ -161,6 +163,13 @@ for row in f:
             Image = row[3]
             Size = row[4]
             VMName = row[5]
+            Tenant = row[6]
+            data = os.system("curl -X GET -H 'application/json; charset=utf-8' https://api2.numergy.com/")
+            version = json.loads(data.read())
+            Nversion = version["versions"]["id"]
+            ImageSet = GetImageId(Image)
+            SizeSet = GetSize(Size)
+            APICom(url="https://api2.numergy.com/%s/%s/servers"%Nversion %Tenant,method="POST",header1="ContentType: application/json; charset=utf-8",header2="X-Auth-Token: %s"%Token,body='{"server": {"flavorRef": "%s","imageRef": "%s","name": "%s"}}'%SizeSet %ImageSet %VMName)
         elif "Google" in row[1]:
             Token = row[2]
             Image = row[3]
@@ -174,4 +183,8 @@ for row in f:
             Region = row[4]
             Size = row[5]
             VMName = row[6]
-            Project = row[7]
+            Tenant = row[7]
+            ImageSet = GetImageId(Image)
+            SizeSet = GetSize(Size)
+            Body = '{"server": {"name": "%s","imageRef": "%s", "flavorRef": "%s"}}'%VMName %ImageSet %SizeSet
+            APICom(url="https://servers.api.rackspacecloud.com/v1.0/010101/v2/%s/servers"%Tenant,method="POST",header1="ContentType: application/json",header2="X-Auth-Token: %s"%Token,body=Body)
