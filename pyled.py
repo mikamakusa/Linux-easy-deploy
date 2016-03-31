@@ -1,8 +1,12 @@
 import csv
+import paramiko
 import spur
 import os
 import json
 import boto.ec2
+import doto
+from googleapiclient import discovery
+from oauth2client.client import GoogleCredentials
 
 def PacMan(package):
     packman = "apt-get","zypper","yum","urpmi","slackpkg","slapt-get","netpkg","equo","pacman","conary","apk add","emerge","lin","cast","niv-env","xpbs","snappy"
@@ -24,7 +28,7 @@ def PacMan(package):
             else: shell.run([i, package])
 
 def APICom(url, header1, header2, method, body):
-    os.system("curl -X %s -H %s -H %s -d %s %s", % method, header1, header2, body, url)
+    os.system("curl -X %s -H %s -H %s -d %s %s" % method, header1, header2, body, url)
 
 def GetImageId(Image):
     if "Amazon" in row[1]:
@@ -121,7 +125,54 @@ def GetRegions(Region):
         elif "US" in row[5]: return "us-east-1"
         elif "Asia" in row[5]: return "ap-northeast-1"
         elif "South America" in row[5]: return "sa-east-1"
-        
+
+def runSSHcmd(hostname,username,password,port):
+    client = paramiko.SSHClient()
+    client.connect(hostname,port=port,username=username,password=password)
+
+def create_instance(compute, project, zone, name, image):
+    source_disk_image = image
+    machine_type = zone
+
+    config = {
+        'name': name,
+        'machineType': machine_type,
+
+        # Specify the boot disk and the image to use as a source.
+        'disks': [
+            {
+                'boot': True,
+                'autoDelete': True,
+                'initializeParams': {
+                    'sourceImage': source_disk_image,
+                }
+            }
+        ],
+
+        # Specify a network interface with NAT to access the public
+        # internet.
+        'networkInterfaces': [{
+            'network': 'global/networks/default',
+            'accessConfigs': [
+                {'type': 'ONE_TO_ONE_NAT', 'name': 'External NAT'}
+            ]
+        }],
+
+        # Allow the instance to access cloud storage and logging.
+        'serviceAccounts': [{
+            'email': 'default',
+            'scopes': [
+                'https://www.googleapis.com/auth/devstorage.read_write',
+                'https://www.googleapis.com/auth/logging.write'
+            ]
+        }],
+    }
+
+    return compute.instances().insert(
+        project=project,
+        zone=zone,
+        body=config).execute()
+
 file = input ("fichier d'inventaire :")
 
 f = csv.reader(open(file), delimiter=";")
@@ -133,15 +184,9 @@ for row in f:
         passw = row[3]
         sshport = row[4]
         for i in row[1]:
-            shell = spur.SshShell(
-                Hostname = hostip,
-                username = login,
-                password = passw,
-                port = sshport
-            )
+            runSSHcmd(i,login,passw,sshport)
             for p in row[5]:
-                package = row[5]
-                PacMan (package)
+                PacMan (p)
 
     else:
         if "Amazon" in row[1]:
@@ -154,18 +199,21 @@ for row in f:
             SizeSet = GetSize(Size)
             ImageSet = GetImageId(Image)
             conn = boto.ec2.connect_to_region("%s"%RegionSet)
-            key = ec2.create_key_pair('%s'%Token)
+            key = boto.ec2.create_key_pair('%s'%Token)
             conn.run_instances('%s'%ImageSet,key_name='%s'%key,instance_type='%s'%SizeSet,security_groups=['%s'%key])
         elif "DigitalOcean" in row[1]:
             Token = row[2]
-            Image = row[3]
-            Region = row[4]
-            Size = row[5]
-            VMName = row[6]
-            ImageSet = GetImageId(Image)
-            SizeSet = GetSize(Size)
-            RegionSet = GetRegions(Region)
-            APICom(url="https://api.digitalocean.com/v2/droplets",method="POST",header1="Content-Type: application/json",header2="Authorization: Bearer %s"%Token,body='{"name": "%s","region": "%s","size": "%s","image": "%s","ssh_keys": null,"backups": false,"ipv6": true,"user_data": null,"private_networking": null}'%VMName %ImageSet %RegionSet %SizeSet)
+            clientid = row[3]
+            Image = row[4]
+            Region = row[5]
+            Size = row[6]
+            VMName = row[7]
+            ImageSet = int(GetImageId(Image))
+            SizeSet = int(GetSize(Size))
+            RegionSet = int(GetRegions(Region))
+            os.system("echo [Credentials] > ~/.doto/.dotorc && echo client_id = %s >> ~/.doto/.dotorc && echo api_key = %s >> ~/.doto/.dotorc"%clientid %Token)
+            do = doto.connect_d0
+            do.create_droplet(name=VMName,size_id=SizeSet,image_id=ImageSet,region_id=RegionSet)
         elif "Cloudwatt" in row[1]:
             Token = row[2]
             Image = row[3]
@@ -189,12 +237,14 @@ for row in f:
             SizeSet = GetSize(Size)
             APICom(url="https://api2.numergy.com/%s/%s/servers"%Nversion %Tenant,method="POST",header1="ContentType: application/json; charset=utf-8",header2="X-Auth-Token: %s"%Token,body='{"server": {"flavorRef": "%s","imageRef": "%s","name": "%s"}}'%SizeSet %ImageSet %VMName)
         elif "Google" in row[1]:
-            Token = row[2]
-            Image = row[3]
-            Region = row[4]
-            Size = row[5]
-            VMName = row[6]
-            Project = row[7]
+            Image = row[2]
+            Region = row[3]
+            Size = row[4]
+            VMName = row[5]
+            Project = row[6]
+            credentials = GoogleCredentials.get_application_default()
+            compute = discovery.build('compute','V1',credentials=credentials)
+            create_instance(compute=compute,project=Project,zone=Region,name=VMName,image=Image)
         elif "Rackspace" in row[1]:
             Token = row[2]
             Image = row[3]
