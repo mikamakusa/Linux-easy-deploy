@@ -1,6 +1,5 @@
 import csv
 import paramiko
-import spur
 import os
 import json
 import boto.ec2
@@ -8,27 +7,22 @@ import doto
 from googleapiclient import discovery
 from oauth2client.client import GoogleCredentials
 
-def PacMan(package):
-    packman = "apt-get","zypper","yum","urpmi","slackpkg","slapt-get","netpkg","equo","pacman","conary","apk add","emerge","lin","cast","niv-env","xpbs","snappy"
-    for i in packman:
-        shell = spur.LocalShell()
-        if ((shell.run([i])).output) in i:
-            if i in "apt-get": shell.run([i, "install", "-y", package])
-            elif i in "yum" : shell.run([i, "install", "-y", package])
-            elif i in "zypper" : shell.run([i, "install", "-y", package])
-            elif i in "slackpkg" : shell.run([i, "install", "-y", package])
-            elif i in "equo" : shell.run([i, "install", "-y", package])
-            elif i in "snappy" : shell.run([i, "install", "-y", package])
-            elif i in "slapt-get" : shell.run([i, "--install", "-y", package])
-            elif i in "pacman" : shell.run([i, "-S", package])
-            elif i in "conary" : shell.run([i, "update", "-y", package])
-            elif i in "apk" : shell.run([i, "add", "-y", package])
-            elif i in "nix-env" : shell.run([i, "-i", "-y", package])
-            elif i in "xpbs" : shell.run([i, "-install", "-y", package])
-            else: shell.run([i, package])
+def PacMan(package, action):
+    if "Install" in action:
+        com = os.popen("ls /etc/")
+        com.read()
+        if "redhat*" in com: os.popen("yum install -y %s" % package)
+        elif "arch*" in com: os.popen("pacman -S %s"%package)
+        elif "gentoo*" in com: os.popen("emerge %s"%package)
+        elif "Suse*" in com: os.popen("zypper install -y %s"%package)
+        elif "debian*" in com: os.popen("apt-get install -y %s"%package)
+        elif "slackware*" in com: os.popen("slackpkg install -y %s"%package)
+        elif "sabayon*" in com: os.popen( "equo install -y %s"%package)
+        elif "alpine*" in com: os.popen("apk add -y %s"%package)
+        elif "sourcemage*" in com: os.popen("cast -y %s"%package)
 
 def APICom(url, header1, header2, method, body):
-    os.system("curl -X %s -H %s -H %s -d %s %s" % method, header1, header2, body, url)
+    os.popen("curl -X %s -H %s -H %s -d %s %s" % method % header1 % header2 % body % url)
 
 def GetImageId(Image):
     if "Amazon" in row[1]:
@@ -186,7 +180,8 @@ for row in f:
         for i in row[1]:
             runSSHcmd(i,login,passw,sshport)
             for p in row[5]:
-                PacMan (p)
+                action = row[6]
+                PacMan(p,action)
 
     else:
         if "Amazon" in row[1]:

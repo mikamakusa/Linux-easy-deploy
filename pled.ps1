@@ -5,6 +5,19 @@ $version = "1.3.5"
         iex (New-Object Net.WebClient).DownloadString("https://gist.github.com/darkoperator/6152630/raw/c67de4f7cd780ba367cccbc2593f38d18ce6df89/instposhsshdev")
     } 
 Import-Module Posh-SSH 
+function Check_JWT {
+    if (Get-ChildItem -Path "C:\Windows\System32" -notmatch "nuget.exe") {
+        Invoke-WebRequest -Uri "http://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -OutFile "C:\Windows\System32\nuget.exe"
+    }
+    Invoke-WebRequest -Uri "https://slproweb.com/download/Win32OpenSSL_Light-1_0_2g.exe" -OutFile "C:\Win32OpenSSL_Light-1_0_2g.exe"
+    Start-Process "C:\Win32OpenSSL_Light-1_0_2g.exe" -ArgumentList "/s" -Wait; Remove-Item "C:\Win32OpenSSL_Light-1_0_2g.exe"
+    nuget Install System.IdentityModel.Tokens.Jwt
+    set OPENSSL_CONF=C:\OpenSSL-Win32\bin\openssl.cfg
+    set Path=%Path%;C:\OpenSSL-Win32\bin
+    C:\OpenSSL-Win32\openssl.exe req -x509 -nodes -days 365 -newkey rsa:2048 -keyout C:\OpenSSL-Win32\cert\myapp.key -out C:\OpenSSL-Win32\cert\myapp.crt
+    C:\OpenSSL-Win32\openssl.exe pkcs12 -export -in C:\OpenSSL-Win32\cert\myapp.crt -inkey C:\OpenSSL-Win32\cert\myapp.key -out C:\OpenSSL-Win32\cert\myapp.pfx
+    Add-Type -Path 'D:\Downloads\System.IdentityModel.Tokens.Jwt.dll' 
+}
 ## Import predefined functions
 function Install-MSIFile {
     [CmdletBinding()]
@@ -41,6 +54,26 @@ function Unzip {
 
     [System.IO.Compression.ZipFile]::ExtractToDirectory($zipfile, $outpath)
 }
+### found here : http://blog.d-apps.com/2013/08/powershell-and-json-web-token-handler.html ###
+function Jwt-CreateToken {  
+    Param(  
+        [string] $issuer,  
+        [string] $audience,  
+        [string] $certificate,  
+        [string] $certificatePassword,  
+        [System.Collections.Generic.List[System.Security.Claims.Claim]] $claims = $null  
+    )  
+    # Make our token valid from now to the next hour.  
+    $createDate = Get-Date  
+    $lifetime = New-Object System.IdentityModel.Protocols.WSTrust.Lifetime($createDate, $createDate.AddHours(1))    
+    # Load our certificate.  
+    $signingCertificate = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($certificate, $certificatePassword, "Export")  
+    $signingCredentials = New-Object System.IdentityModel.Tokens.X509SigningCredentials($signingCertificate)  
+    # Create our JSON web token.  
+    $token = New-Object System.IdentityModel.Tokens.JwtSecurityToken($issuer, $audience, $claims, $lifetime, $signingCredentials)  
+    return (New-Object System.IdentityModel.Tokens.JwtSecurityTokenHandler).WriteToken($token)  
+}  
+##############################################################################################
 ## Custom functions
 function Check_AWS_tools{
     if (((Get-WmiObject -Class Win32_OperatingSystem).Caption -match "Windows 2012") -or (((Get-WmiObject -Class Win32_OperatingSystem).Caption -match "Windows 2008") -and (($Host).Version).Major -match "5")) {
@@ -57,7 +90,7 @@ function Check_AWS_tools{
                 Expand-Archive -Path "c:\ec2-api-tools.zip" -DestinationPath "C:\Windows\System32\ec2-api-tools"
             }
             else {
-                Unzip -zipfile "c:\ec2-api-tools.zip" -outpath"C:\Windows\System32\ec2-api-tools"
+                Unzip -zipfile "c:\ec2-api-tools.zip" -outpath "C:\Windows\System32\ec2-api-tools"
             }
         }
     }
@@ -77,52 +110,42 @@ function Get-ImageId ($file){
             }
         }
         "DigitalOcean" {
-            switch ($Image) {
-                "Debian" {return "15611095"}
-                "Ubuntu" {return "15621816"}
-                "CentOS" {return "16040476"}
-                "Fedora" {return "14238961"}
-                "FreeBSD" {return "13321858"}
-                
+            $Token = ((Import-Csv $file -Delimiter ";").Token)
+            return ((((((Invoke-WebRequest -Uri https://api.digitalocean.com/v2/images -Headers @{"Authorization" = "Bearer $Token"} -Method Get).content) | ConvertFrom-Json).images)| where slug -match "$Image").id)
             }
         }
         "Cloudwatt" {
-            switch ($Image) {
-                "Ubuntu" {return "edffd57d-82bf-4ffe-b9e8-af22563741bf"}
-                "Suse" {return "e194b52d-cf80-4b05-9be3-56a2f3ba10ff"}
-                "CentOS" {return "86e61ee3-078f-405d-8eab-210174d20159"}
-                "Fedora" {return "f77e7c4b-3ba6-4f1d-b1eb-69d20d5beee6"}
-                "Windows 2012" {return "ed01abf8-e6a8-4dcf-b9bb-d2dd0aefd503"}
-                "Windows 2008" {return "3d014779-fa19-49c8-8310-6c9a163ed934"}
-            }
+            $Version = (((Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/ -Method Get).content | ConvertFrom-Json).versions).id
+            $TokenSet = Get-Token -file $file;$Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
+            return (((Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/$Version/$Tenant/images -Method Get -Headers @{"X-Auth-Token" = '"'+$TokenSet+'"'}).content | ConvertFrom-Json).images | where name -EQ "$Image").id
         }
         "Numergy" {
-            switch ($Image) {
-                "Ubuntu" {return "41221dc8-29e3-11e4-857f-005056992152"}
-                "Debian" {return "de8ff4bc-038c-11e5-bbd3-005056992152"}
-                "CentOS" {return "aadf1726-a838-11e2-816d-005056992152"}
-                "Red Hat" {return "aa56ee50-a838-11e2-816d-005056992152"}
-                "Windows 2008" {return "902771bc-47bf-11e4-857f-005056992152"}
-                "Windows 2012" {return "59bc519c-5846-11e3-8d40-005056992152"}
-            }
-        }
-        "ArubaCloud" {
-            switch ($Image) {
-                "Ubuntu" {return "125"}
-                "Debian" {return "17"}
-                "CentOS" {return "29"}
-                "Suse" {return "105"}
-                "Windows 2008" {return "30"}
-            }
+            $Version = ((((Invoke-WebRequest -Uri https://api2.numergy.com/ -Method Get).content) | ConvertFrom-Json).versions | where status -Match "CURRENT").id
+            $Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
+            return ((((Invoke-WebRequest -Uri http://api2.numergy.com/$Version/$Tenant/images -Headers -Headers @{"ContentType" = "application/json; charset=utf-8";"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Get).content) | ConvertFrom-Json).images | where name -EQ "$Image").id
         }
         "Google" {
+            $Project = ((Import-Csv $file -Delimiter ";").Project)
             switch ($Image) {
-                "Debian" {return "projects/debian-cloud/global/images/debian-8-jessie-v20160301"}
-                "CentOS" {return "projects/centos-cloud/global/images/centos-7-v2016030"}
-                "Suse" {return "projects/suse-cloud/global/images/opensuse-13-2-v20160222"}
-                "Ubuntu" {return "projects/ubuntu-os-cloud/global/images/ubuntu-1510-wily-v20160315"}
-                "Windows 2008" {return "projects/windows-cloud/global/images/windows-server-2008-r2-dc-v20160224"}
-                "Windows 2012" {return "projects/windows-cloud/global/images/windows-server-2012-r2-dc-v20160224"}
+                $Image -match "debian" {
+                    return (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/debian-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
+                }
+                $Image -match "centos" {
+                    return (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/centos-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
+                }
+                $Image -match "opensuse" {
+                    return (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/opensuse-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
+                }
+                $Image -match "red(-)hat" {
+                    return (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/rhel-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
+                }
+                $Image -match "ubuntu" {
+                    return (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
+                }
+                $Image -match "Windows" {
+                    return (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/windows-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
+                }
+                default {}
             }
         }
         "Rackspace" {
@@ -142,30 +165,12 @@ function Get-Regions ($file) {
     $Name = ((Import-Csv $file -Delimiter ";").Name)
     switch ($Name) {
         "DigitalOcean" {
-            switch ($Region) {
-                "New York" {return "nyc1"}
-                "Amsterdam" {return "ams2"}
-                "San Francisco" {return "sfo1"}
-                "Singapore" {return "sgp1"}
-                "London" {return "lon1"}
-            }
-        }
-        "ArubaCloud" {
-            switch ($Region) {
-                "UK" {return "dc6"}
-                "Germany" {return "dc5"}
-                "France" {return "dc4"}
-                "Czech Republic" {return "dc3"}
-                "Italy2" {return "dc2"}
-                "Italy1" {return "dc1"}
-            }
+            $Token = ((Import-Csv $file -Delimiter ";").Token)
+            return ((((((Invoke-WebRequest -Uri "https://api.digitalocean.com/v2/regions" -Headers @{"Authorization" = "Bearer $Token"} -Method Get).content) | ConvertFrom-Json).regions) | where available -Match "True" | where slug -match "$Region").slug)
         }
         "Google" {
-            switch ($Region) {
-                "Asia" {return "asia-east1-a"}
-                "Europe" {return "europe-west1-b"}
-                "US" {return "us-central1-a"}
-            }
+            $Project = ((Import-Csv $file -Delimiter ";").Project)
+            return (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/regions -Headers @{"Authorization" = "Bearer " + $Token} -Method Get).content | ConvertFrom-Json | where items -Match "$Region" ).items)
         }
     }
 }
@@ -174,49 +179,22 @@ function Get-Size ($file) {
     $Name = ((Import-Csv $file -Delimiter ";").Name)
     switch ($Name) {
         "DigitalOcean" {
-            switch ($Size) {
-                "small" {return "512mb"}
-                "medium" {return "1gb"}
-                "large" {return "2gb"}
-                "xl" {return "4gb"}
-                "xxl" {return "8gb"}
-            }
+            $Token = ((Import-Csv $file -Delimiter ";").Token)
+            return ((((((Invoke-WebRequest -Uri "https://api.digitalocean.com/v2/sizes" -Headers @{"Authorization" = "Bearer $Token"} -Method Get).content) | ConvertFrom-Json).sizes) | where available -Match "True" | where slug -match "$Size" ).slug)
         }
         "Cloudwatt" {
-            switch ($Size) {
-                "small" {return "21"}
-                "medium" {return "22"}
-                "large" {return "23"}
-                "xl" {return "24"}
-                "xxl" {return "30"}
-            }
+            $Version = (((Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/ -Method Get).content | ConvertFrom-Json).versions).id
+            $TokenSet = Get-Token -file $file;$Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
+            return (((Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/$Version/$Tenant/flavors -Method Get -Headers @{"X-Auth-Token" = '"'+$TokenSet+'"'}).content | ConvertFrom-Json).flavors | where name -Match "$Size").id
         }
         "Numergy" {
-            switch ($Size) {
-                "XS" {return "bbe1760a-30ef-11e3-8d40-005056992152"}
-                "S" {return "01c25006-a5c0-11e2-816d-005056992152"}
-                "S+" {return "01c250a6-a5c0-11e2-816d-005056992152"}
-                "L" {return "01c24ca0-a5c0-11e2-816d-005056992152"}
-                "L+" {return "01c24f52-a5c0-11e2-816d-005056992152"}
-                "XL" {return "01c25132-a5c0-11e2-816d-005056992152"}
-            }
-        }
-        "ArubaCloud" {
-            switch ($Size) {
-                "S" {return "1"}
-                "M" {return "2"}
-                "L" {return "3"}
-                "XL"{return "4"}
-            }
+            $Version = ((((Invoke-WebRequest -Uri https://api2.numergy.com/ -Method Get).content) | ConvertFrom-Json).versions | where status -Match "CURRENT").id
+            $Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
+            return ((((Invoke-WebRequest -Uri http://api2.numergy.com/$Version/$Tenant/flavors -Headers @{"ContentType" = "application/json; charset=utf-8";"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Get).content) | ConvertFrom-Json).flavors | where name -EQ "$Size").id
         }
         "Google" {
-            $Region = ((Import-Csv $file -Delimiter ";").Region)
             $Project = ((Import-Csv $file -Delimiter ";").Project)
-            switch ($Region) {
-                "asia-east1-a" {return "https://content.googleapis.com/compute/v1/projects/$Project/zones/asia-east1-a/machineTypes/f1-micro"}
-                "europe-west1-b" {return "https://content.googleapis.com/compute/v1/projects/$Project/zones/europe-west1-b/machineTypes/f1-micro"}
-                "us-central1-a" {return "https://content.googleapis.com/compute/v1/projects/$Project/zones/us-central1-a/machineTypes/f1-micro"}
-            }
+            return ((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/zones/$Region/machineType -Method Get -Headers @{"Authorization" = "Bearer " + $Token}).content | ConvertFrom-Json | where name -Match $Size).selfLink
         }
         "Rackspace" {
             switch ($Size) {
@@ -233,6 +211,14 @@ function Get-Size ($file) {
 function Get-Token ($file) {
     $Name = ((Import-Csv $file -Delimiter ";").Name)
     switch ($Name) {
+       "Google" {
+           Check_JWT
+            $claims = New-Object System.Collections.Generic.List[System.Security.Claims.Claim]  
+            $claims.Add((New-Object System.Security.Claims.Claim("scope", "https://www.googleapis.com/auth/compute")))  
+            $encToken = Jwt-CreateToken -issuer "oauthplayground-eng@google.com" -audience "https://www.googleapis.com/oauth2/v4/token" -certificate "C:\OpenSSL-Win32\cert\myapp.pfx" -certificatePassword "notasecret" -claims $claims  
+            Write-Host $encToken 
+            (New-Object System.IdentityModel.Tokens.JwtSecurityTokenHandler).ReadToken($encToken)  
+       }
         "Cloudwatt" {
             $Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
             $Username = ((Import-Csv -Delimiter ";").Username)
@@ -248,11 +234,6 @@ function Get-Token ($file) {
             $Nversion = ((Invoke-WebRequest -Uri "https://api2.numergy.com/" -ContentType "application/json; charset=utf-8" -Method Get | ConvertFrom-Json).versions | select -Property id,status -Last 1).id
             $Tbody = '{"auth": {"apiAccessKeyCredentials": {"accessKey": "'+$AccessKey+'","secretKey": "'+$SecretKey+'" },"tenantId": "'+$tenantId+'" } }'
             $Token = (((((Invoke-WebRequest -Uri "https://api2.numergy.com/V3.0/tokens" -ContentType "application/json; charset=utf-8" -Method Post -Body $TBody) | ConvertFrom-Json).access).token).id)
-        }
-        "OVH" {
-            $AppKey = ((Import-Csv $file -Delimiter ";").ApplicationKey)
-            $Uri = "https://eu.api.ovh.com/1.0/auth/credential"
-            Invoke-WebRequest -Uri $Uri -ContentType "application/json" -Headers @{"X-Ovh-Application" = $AppKey} -Method Post -Body '{"accessRules":[{"method": "GET","path": "/*"}],"redirection":"https://www.mywebsite.com/"}'
         }
         "Rackspace" {
             $Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
@@ -371,20 +352,6 @@ function PacMan {
                                                     elseif ($item -match "nix-env") {return $item+" -e "+$p}
                                                     elseif ($item -match "xpbs") {return $item+"-remove "+$p}
                                                     else {}
-                                                }
-                                                "Search" {
-                                                    if ($item -match "apt-get") {return "apt-cache "+$p}
-                                                    elseif ($item -match "zypper") {return $item+" search -t pattern "+$p}
-                                                    elseif ($item -match "yum" -or "equo" -or "slackpkg" -or "apk" -or "snappy") {return $item+"search "+$p}
-                                                    elseif ($item -match "urpmi") {return "urpmq -fuzzy "+$p}
-                                                    elseif ($item -match "netpkg") {return $item+"list | grep "+$p}
-                                                    elseif ($item -match "conary") {return $item+" query "+$p}
-                                                    elseif ($item -match "Pacman") {return $item+" -S "+$p}
-                                                    elseif ($item -match "emerge") {return $item+" --search "+$p}
-                                                    elseif ($item -match "lin") {return "lvu search "+$p}
-                                                    elseif ($item -match "cast") {return "gaze search "+$p}
-                                                    elseif ($item -match "nix-env") {return " -qa "+$p}
-                                                    else {return "xbps-query -Rs "+$p}
                                                 }
                                                 "UpSystem" {
                                                     if ($item -match "zypper" -or "yum" -or "snappy") {return $item+" update -y"}
@@ -615,6 +582,7 @@ function PacMan {
                                          $RNum = ((Import-Csv $file -Delimiter ";").RNum)
                                          foreach ($item in $RNum) {
                                              Invoke-SShCommand -SessionId ((Get-SSHSession).SessionId) -Command "iptables -L $RNum"
+                                             Invoke-SShCommand -SessionId ((Get-SSHSession).SessionId) -Command "iptables-save -c"
                                          }
                                      }
                                      "Intialize" {
@@ -821,14 +789,15 @@ function PacMan {
                     }
                 }
                 "Cloudwatt" {
+                    $Version = (((Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/ -Method Get).content | ConvertFrom-Json).versions).id
                     foreach ($item in ((Import-Csv $file -Delimiter ";").VMName)) {
                         $TokenSet = Get-Token -file $file; $ImageSet = Get-ImageId -file $file; $SizeSet = Get-Size -file $file;$VMName = ((Import-Csv $file -Delimiter ";").VMName);$Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
                         [xml]$InsCreate = "<?xml version='1.0' encoding='UTF-8'?><server xmlns='http://docs.openstack.org/compute/api/v1.1' imageRef='$ImageSet' flavorRef='$SizeSet' name='$VMName'></server>" 
-                        Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers" -Method Post -ContentType "application/json" -Headers @{"Accept" = "application/json";"X-Auth-Token"= "$Token"}
-                        $ServerId = ((Invoke-WebRequest -Uri "https://compute.fr1.cloudwatt.com/v2/$Tenant/servers" -Method Post -ContentType "application/json" -Headers @{"Accept" = "application/json";"X-Auth-Token"= "$Token"} -Body $InsCreate | ConvertFrom-Json).server).id
-                        $NetId = ((((Invoke-WebRequest -Uri "https://network.fr1.cloudwatt.com/v2/networks" -ContentType "application/json" -Method GET -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'}) | ConvertFrom-Json).networks).id | where {$_.name -match "public"})
-                        $IP = (((Invoke-WebRequest -Uri "https://network.fr1.cloudwatt.com/v2/floatingips" -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'"+"{"+"floatingip"+':'+'{'+'"'+"floating_network_id"+'"'+':'+'"'+$NetId+'"}}'+"'" | ConvertFrom-Json).floatingip).floating_ip_address)
-                        Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/v2/$Tenant/servers/$ServerId/action -Method Post -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'{"+'addFloatingIp":{"address":"'+$IP+'"}}'+"'"
+                        Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/$Version/$Tenant/servers -Method Post -ContentType "application/json" -Headers @{"Accept" = "application/json";"X-Auth-Token"= "$Token"}
+                        $ServerId = ((Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/$Version/$Tenant/servers -Method Post -ContentType "application/json" -Headers @{"Accept" = "application/json";"X-Auth-Token"= "$Token"} -Body $InsCreate | ConvertFrom-Json).server).id
+                        $NetId = ((((Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/$Version/networks -ContentType "application/json" -Method GET -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'}) | ConvertFrom-Json).networks).id | where {$_.name -match "public"})
+                        $IP = (((Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/$Version/floatingips -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'"+"{"+"floatingip"+':'+'{'+'"'+"floating_network_id"+'"'+':'+'"'+$NetId+'"}}'+"'" | ConvertFrom-Json).floatingip).floating_ip_address)
+                        Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/$Version/$Tenant/servers/$ServerId/action -Method Post -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'{"+'addFloatingIp":{"address":"'+$IP+'"}}'+"'"
                     }      
                 }
                 "Numergy" {
@@ -844,7 +813,7 @@ function PacMan {
                 "Google" {
                     foreach ($item in ((Import-Csv $file -Delimiter ";").VMName)) {
                         $Zone = Get-Regions -file $file;$ImageSet=Get-ImageId -file $file;$VMName = ((Import-Csv $file -Delimiter ";").VMName);$Project = ((Import-Csv $file -Delimiter ";").Project)
-                        $SizeSet = Get-Size -file $file;$Key = ((Import-Csv $file -Delimiter ";").Key)
+                        $SizeSet = Get-Size -file $file;$Key = ((Import-Csv $file -Delimiter ";").Key):$Token = Get-Token -file $file
                         $Body = '{
                                 "name": "'+$VMName+'",
                                 "machineType": "'+$SizeSet+'",
@@ -860,7 +829,7 @@ function PacMan {
                                         {"sourceImage": "'+$Image+'"}
                                     }]
                                 }'
-                        Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/zones/$Zone/instances?key=$Key -Method POST -Headers @{"ContentType" = "application/json";"Content-Type" = "application/x-www-form-urlencoded"} -body $Body
+                        Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/zones/$Zone/instances?key=$Key -Method POST -Headers @{"ContentType" = "application/json";"Content-Type" = "application/x-www-form-urlencoded";"Authorization" = "Bearer " + $Token} -body $Body
                     }
                 }
                 "Rackspace" {
