@@ -127,35 +127,30 @@ function Get-ImageId ($file){
         "Google" {
             $Project = ((Import-Csv $file -Delimiter ";").Project)
             switch ($Image) {
-                $Image -match "debian" {
+                "debian" {
                     return (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/debian-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
                 }
-                $Image -match "centos" {
+                "centos" {
                     return (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/centos-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
                 }
-                $Image -match "opensuse" {
+                "opensuse" {
                     return (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/opensuse-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
                 }
-                $Image -match "red(-)hat" {
+                "red(-)hat" {
                     return (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/rhel-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
                 }
-                $Image -match "ubuntu" {
+                "ubuntu" {
                     return (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
                 }
-                $Image -match "Windows" {
+                "Windows" {
                     return (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/windows-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
                 }
                 default {}
             }
         }
         "Rackspace" {
-            switch ($Image) {
-                "Debian" {return "a10eacf7-ac15-4225-b533-5744f1fe47c1"}
-                "CentOS" {return "c195ef3b-9195-4474-b6f7-16e5bd86acd0"}
-                "Suse" {return "096c55e5-39f3-48cf-a413-68d9377a3ab6"}
-                "Ubuntu" {return "5cebb13a-f783-4f8c-8058-c4182c724ccd"}
-                "Windows 2008" {return "b9ea8426-8f43-4224-a182-7cdb2bb897c8"}
-            }
+            $Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
+            return ((((Invoke-WebRequest -Uri https://dfw.servers.api.rackspacecloud.com/v2/$Tenant/images -Headers -Headers @{"ContentType" = "application/json; charset=utf-8";"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Get).content) | ConvertFrom-Json).images | where name -EQ "$Image").id
         }
         default {}
     }
@@ -197,13 +192,8 @@ function Get-Size ($file) {
             return ((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/zones/$Region/machineType -Method Get -Headers @{"Authorization" = "Bearer " + $Token}).content | ConvertFrom-Json | where name -Match $Size).selfLink
         }
         "Rackspace" {
-            switch ($Size) {
-                "small" {return "3"}
-                "medium" {return "4"}
-                "large" {return "5"}
-                "xl" {return "6"}
-                "xxl" {return "7"}
-            }
+            $Tenant = ((Import-Csv $file -Delimiter ";").Tenant)
+            return ((((Invoke-WebRequest -Uri https://dfw.servers.api.rackspacecloud.com/v2/$Tenant/flavors -Headers -Headers @{"ContentType" = "application/json; charset=utf-8";"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Get).content) | ConvertFrom-Json).flavors | where name -EQ "$Size").id
         }
         default{}
     }
@@ -323,7 +313,7 @@ function PacMan {
                         $Part = ((Import-Csv $file -Delimiter ";").Part)
                         switch ($Part) {
                             "Package" {
-                                $packman = "apt-get","zypper","yum","urpmi","slackpkg","slapt-get","netpkg","equo","pacman","conary","apk add","emerge","lin","cast","niv-env","xpbs","snappy"
+                                $packman = "apt-get","zypper","yum","urpmi","slackpkg","slapt-get","netpkg","equo","pacman","conary","apk add","emerge","lin","cast","nix-env","xpbs","snappy"
                                 foreach ($item in $packman) {
                                     if (((Invoke-SSHCommand -SessionId ((Get-SSHSession).SessionId) -Command "$item").ExitStatus -notmatch "127")) {
                                         foreach ($p in ((Import-Csv $file -Delimiter ";").Packages)) {
