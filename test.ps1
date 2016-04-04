@@ -108,3 +108,14 @@ function GNU_Install {
     New-SSHSession -ComputerName $IP -Credentials $credentials -Port $Port
     Invoke-SSHCommand -SessionId (Get-SSHSession).SessionId -Command "$Action $Package"
 }
+function Provider {
+    Param(
+        [Parameter(Mandatory=$true,position = 0)][string]$Name,
+        [Parameter(Mandatory=$true,Position = 1)][string]$VMName,
+        [Parameter(Mandotory=$true,Position = 2)][string]$Image,
+        [Parameter(Mandatory=$true,Position = 3)][string]$Size,
+        [Parameter(Mandatory=$true,Position = 4)][string]$Region,
+        [Parameter(Mandatory=$true,Position = 5)][string]$Token
+    )
+    
+}

@@ -95,7 +95,7 @@ function Check_AWS_tools{
         }
     }
 }
-function Get-ImageId ($file){
+function Get-ImageId ($file) {
     $Image = ((Import-Csv $file -Delimiter ";").Image)
     $Name = ((Import-Csv $file -Delimiter ";").Name)
     switch ($Name) {
@@ -112,7 +112,6 @@ function Get-ImageId ($file){
         "DigitalOcean" {
             $Token = ((Import-Csv $file -Delimiter ";").Token)
             return ((((((Invoke-WebRequest -Uri https://api.digitalocean.com/v2/images -Headers @{"Authorization" = "Bearer $Token"} -Method Get).content) | ConvertFrom-Json).images)| where slug -match "$Image").id)
-            }
         }
         "Cloudwatt" {
             $Version = (((Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/ -Method Get).content | ConvertFrom-Json).versions).id
@@ -202,7 +201,7 @@ function Get-Token ($file) {
     $Name = ((Import-Csv $file -Delimiter ";").Name)
     switch ($Name) {
        "Google" {
-           Check_JWT
+            Check_JWT
             $claims = New-Object System.Collections.Generic.List[System.Security.Claims.Claim]  
             $claims.Add((New-Object System.Security.Claims.Claim("scope", "https://www.googleapis.com/auth/compute")))  
             $encToken = Jwt-CreateToken -issuer "oauthplayground-eng@google.com" -audience "https://www.googleapis.com/oauth2/v4/token" -certificate "C:\OpenSSL-Win32\cert\myapp.pfx" -certificatePassword "notasecret" -claims $claims  
