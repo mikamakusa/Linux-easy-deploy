@@ -113,21 +113,21 @@ function GNU_Install {
 }
 function Provider {
     Param(
-        [Parameter(Mandatory=$true,position = 0)][string]$Name,
-        [Parameter(Mandatory=$true,Position = 1)][string]$VMName,
-        [Parameter(Mandotory=$true,Position = 2)][string]$Image,
-        [Parameter(Mandatory=$true,Position = 3)][string]$Size,
-        [Parameter(Mandatory=$true,Position = 4)][string]$Region,
-        [Parameter(Mandatory=$false,Position = 5)][string]$Password,
-        [Parameter(Mandatory=$false,Position = 6)][string]$Number,
-        [Parameter(Mandatory=$false,Position = 7)][string]$Token,
-        [Parameter(Mandatory=$false,Position = 8)][string]$Tenant,
-        [Parameter(Mandatory=$false,Position = 9)][string]$Username,
-        [Parameter(Mandatory=$false,Position = 10)][string]$Password,
-        [Parameter(Mandatory=$false,Position = 11)][string]$APIKey,
-        [Parameter(Mandatory=$false,Position = 12)][string]$Project,
-        [Parameter(Mandatory=$false,Position = 13)][string]$AccessKey,
-        [Parameter(Mandatory=$false,Position = 14)][string]$SecretKey
+        [Parameter(Mandatory=$true,position = 1)][ValidateSet("Insert","Remove","Reboot","Rebuild")][string]$Action,
+        [Parameter(Mandatory=$true,position = 1)][string]$Name,
+        [Parameter(Mandatory=$true,Position = 2)][string]$VMName,
+        [Parameter(Mandotory=$true,Position = 3)][string]$Image,
+        [Parameter(Mandatory=$true,Position = 4)][string]$Size,
+        [Parameter(Mandatory=$true,Position = 5)][string]$Region,
+        [Parameter(Mandatory=$false)][string]$Password,
+        [Parameter(Mandatory=$false)][string]$Number,
+        [Parameter(Mandatory=$false)][string]$Token,
+        [Parameter(Mandatory=$false)][string]$Tenant,
+        [Parameter(Mandatory=$false)][string]$Username,        
+        [Parameter(Mandatory=$false)][string]$APIKey,
+        [Parameter(Mandatory=$false)][string]$Project,
+        [Parameter(Mandatory=$false)][string]$AccessKey,
+        [Parameter(Mandatory=$false)][string]$SecretKey
     )
     switch ($Name) {
         "Cloudwatt" {
@@ -204,7 +204,6 @@ function Provider {
                 $body = '{"name": "'+$VMName+'","region": "'+$RegionSet+'","size": "'+$SizeSet+'","image": "'+$ImageSet+'","ssh_keys": null,"backups": false,"ipv6": true,"user_data": null,"private_networking": null}'
                 Invoke-WebRequest -Uri https://api.digitalocean.com/v2/droplets -Method POST -Headers @{"Content-Type" = "application/json";"Authorization" = "Bearer $Token"} -Body $body  
                 }
-            }
         }
         "Google" {
             # Image
