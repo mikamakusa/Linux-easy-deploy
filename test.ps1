@@ -118,25 +118,139 @@ function Provider {
         [Parameter(Mandotory=$true,Position = 2)][string]$Image,
         [Parameter(Mandatory=$true,Position = 3)][string]$Size,
         [Parameter(Mandatory=$true,Position = 4)][string]$Region,
-        [Parameter(Mandatory=$false,Position = 5)][string]$Token,
-        [Parameter(Mandatory=$false,Position = 5)][string]$Tenant,
-        [Parameter(Mandatory=$false,Position = 5)][string]$Username,
-        [Parameter(Mandatory=$false,Position = 5)][string]$Password
+        [Parameter(Mandatory=$false,Position = 5)][string]$Password,
+        [Parameter(Mandatory=$false,Position = 6)][string]$Number,
+        [Parameter(Mandatory=$false,Position = 7)][string]$Token,
+        [Parameter(Mandatory=$false,Position = 8)][string]$Tenant,
+        [Parameter(Mandatory=$false,Position = 9)][string]$Username,
+        [Parameter(Mandatory=$false,Position = 10)][string]$Password,
+        [Parameter(Mandatory=$false,Position = 11)][string]$APIKey,
+        [Parameter(Mandatory=$false,Position = 12)][string]$Project,
+        [Parameter(Mandatory=$false,Position = 13)][string]$AccessKey,
+        [Parameter(Mandatory=$false,Position = 14)][string]$SecretKey
     )
     switch ($Name) {
         "Cloudwatt" {
+            # Token
             [xml]$auth = "<?xml version='1.0' encoding='UTF-8'?><auth xmlns='http://docs.openstack.org/identity/v2.0' tenantName='$Tenant'><passwordCredentials username='$Username' password='$Password'/></auth>"
             [xml]$TokenRequest = Invoke-WebRequest -Uri "https://identity.fr1.cloudwatt.com/v2.0/tokens" -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json"} -Body $auth
             $Token = $TokenRequest.access.token.id
             $Version = (((Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/ -Method Get).content | ConvertFrom-Json).versions).id
+            # Image
             $ImageSet = (((Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/$Version/$Tenant/images -Method Get -Headers @{"X-Auth-Token" = '"'+$Token+'"'}).content | ConvertFrom-Json).images | where name -EQ "$Image").id
+            # Size
             $SizeSet = (((Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/$Version/$Tenant/flavors -Method Get -Headers @{"X-Auth-Token" = '"'+$Token+'"'}).content | ConvertFrom-Json).flavors | where name -Match "$Size").id
-            [xml]$InsCreate = "<?xml version='1.0' encoding='UTF-8'?><server xmlns='http://docs.openstack.org/compute/api/v1.1' imageRef='$ImageSet' flavorRef='$SizeSet' name='$VMName'></server>" 
-            Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/$Version/$Tenant/servers -Method Post -ContentType "application/json" -Headers @{"Accept" = "application/json";"X-Auth-Token"= "$Token"}
-            $ServerId = ((Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/$Version/$Tenant/servers -Method Post -ContentType "application/json" -Headers @{"Accept" = "application/json";"X-Auth-Token"= "$Token"} -Body $InsCreate | ConvertFrom-Json).server).id
-            $NetId = ((((Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/$Version/networks -ContentType "application/json" -Method GET -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'}) | ConvertFrom-Json).networks).id | where {$_.name -match "public"})
-            $IP = (((Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/$Version/floatingips -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'"+"{"+"floatingip"+':'+'{'+'"'+"floating_network_id"+'"'+':'+'"'+$NetId+'"}}'+"'" | ConvertFrom-Json).floatingip).floating_ip_address)
-            Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/$Version/$Tenant/servers/$ServerId/action -Method Post -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body "'{"+'addFloatingIp":{"address":"'+$IP+'"}}'+"'"
+            # Security Group
+            $SGroup = (((Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/v2.0/security-groups -Method Post -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body '{"security_group":{"name":"Security","description":"SecGroup"}}').content | ConvertFrom-Json).security_group).name
+            # Network
+            $NetworkId = (((Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/v2.0/security-groups -Method Post -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body '{"network":{"name": "network1", "admin_state_up": true}}').content | ConvertFrom-Json).network).id
+            Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/v2.0/security-groups -Method Post -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body '{"subnet":{"network_id":"'$NetworkId'","ip_version":4,"cidr":"192.168.0.0/24"}}'
+            # SSH (Keys & Auth) & Instance creation
+            if ($Image -match "CoreOS" -or "CentOS" -or "Debian" -or "Ubuntu" -or "OpenSuse" -or "Fedora") {
+                # Key
+                $Key = (((Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/$Version/$Tenant/os-keypairs -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Post -Body '{"keypair":{"name":"cle"}}').content | ConvertFrom-Json).keypair)
+                Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/$Version/security-group-rules -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Post -Body '{"security_group_rule":{"direction":"ingress","port_range_min":"22","ethertype":"IPv4","port_range_max":"22","protocol":"tcp","security_group_id":"'+$SgroupId+'"}}'
+                Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/$Version/$Tenant/servers -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Post -Body '{"server": {"name": "'+$VMName+'","imageRef": "'+$ImageSet+'","flavorRef": "'+$SizeSet+'","metadata": {"My Server Name": "'+$VMName+'"},"personality": [{"path": "~/.ssh/authorized_keys","contents": "'+$Key+'"}]}}'
+            }
+            else {
+                Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/$Version/security-group-rules -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Post -Body '{"security_group_rule":{"direction":"ingress","port_range_min":"3389","ethertype":"IPv4","port_range_max":"3389","protocol":"tcp","security_group_id":"'$SgroupId'"}}'
+                Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/$Version/$Tenant/servers -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Post -Body '{"server":{"name":"'+$VMName+'","key_name":"cle","imageRef":"'+$ImageSet+'","flavorRef":"'+$SizeSet+'","max_count":'+$Number+',"min_count":1,"networks":[{"uuid":"'+$NetworkId+'"}],"metadata": {"admin_pass": "'+$Password+'"},"security_groups":[{"name":"default"},{"name":"'+$Sgroup+'"}]}}'
+            }
         }
+        "Numergy" {
+            # Token
+            $Nversion = ((Invoke-WebRequest -Uri "https://api2.numergy.com/" -ContentType "application/json; charset=utf-8" -Method Get | ConvertFrom-Json).versions | select -Property id,status -Last 1).id
+            $Tbody = '{"auth": {"apiAccessKeyCredentials": {"accessKey": "'+$AccessKey+'","secretKey": "'+$SecretKey+'" },"tenantId": "'+$tenantId+'" } }'
+            $Token = (((((Invoke-WebRequest -Uri "https://api2.numergy.com/V3.0/tokens" -ContentType "application/json; charset=utf-8" -Method Post -Body $TBody) | ConvertFrom-Json).access).token).id)
+            # Size
+            $SizeSet = ((((Invoke-WebRequest -Uri http://api2.numergy.com/$Version/$Tenant/flavors -Headers @{"ContentType" = "application/json; charset=utf-8";"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Get).content) | ConvertFrom-Json).flavors | where name -EQ "$Size").id
+            # Image
+            $ImageSet = ((((Invoke-WebRequest -Uri http://api2.numergy.com/$Version/$Tenant/images -Headers -Headers @{"ContentType" = "application/json; charset=utf-8";"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Get).content) | ConvertFrom-Json).images | where name -EQ "$Image").id
+            # Instance creation
+            $Uri = https://api2.numergy.com/$Nversion/$TenantID/servers
+            $Body = '{"server": {"flavorRef": "'+$SizeSet+'","imageRef": "'+$ImageSet+'","name": "'+$VMName+'"}}'
+            Invoke-WebRequest -Uri https://api2.numergy.com/$Nversion/$TenantID/servers -Method Post -Headers @{"ContentType" = "application/json; charset=utf-8";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body $Body
+        }
+        "Rackspace" {
+            # Token
+            $Token = (((((Invoke-WebRequest -Uri "https://identity.api.rackspacecloud.com/v2.0/tokens" -ContentType "application/json" -Body "'"+'{"auth":{"RAX-KSKEY:apiKeyCredentials":{"username":"'+$Username+'","apiKey":"'+$apiKey+'"}}}'+"'") | ConvertFrom-Json).access).token).id)
+            # Size 
+            $SizeSet = ((((Invoke-WebRequest -Uri https://dfw.servers.api.rackspacecloud.com/v2/$Tenant/flavors -Headers -Headers @{"ContentType" = "application/json; charset=utf-8";"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Get).content) | ConvertFrom-Json).flavors | where name -EQ "$Size").id
+            # Image
+            $ImageSet = (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/windows-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
+            # Instance creation
+            $Body = '{"server": {"name": "'+$Name+'","imageRef": "'+$ImageSet+'","flavorRef": "'+$sizeSet+'"}}'
+            Invoke-WebRequest -Uri https://servers.api.rackspacecloud.com/v1.0/010101/v2/$Tenant/servers -Method Post -Headers @{"ContentType" = "application/json";"X-Auth-Token" = $TokenSet;"X-Auth-Project-Id" = $VMName} -Body $Body
+        }
+        "DigitalOcean" {
+            # Image
+            $ImageSet = ((((((Invoke-WebRequest -Uri https://api.digitalocean.com/v2/images -Headers @{"Authorization" = "Bearer $Token"} -Method Get).content) | ConvertFrom-Json).images)| where slug -match "$Image").id)
+            # Region
+            $RegionSet = ((((((Invoke-WebRequest -Uri https://api.digitalocean.com/v2/regions -Headers @{"Authorization" = "Bearer $Token"} -Method Get).content) | ConvertFrom-Json).regions) | where available -Match "True" | where slug -match "$Region").slug)
+            # Size
+            $SizeSet = ((((((Invoke-WebRequest -Uri https://api.digitalocean.com/v2/sizes -Headers @{"Authorization" = "Bearer $Token"} -Method Get).content) | ConvertFrom-Json).sizes) | where available -Match "True" | where slug -match "$Size" ).slug)
+            # Instance creation
+            if ($Number -gt 1) {
+                switch ($Number) {
+                        2 {$body = '{"name": ["'+$VMName[0]+'","'+$VMName[1]+'"],"region": "'+$RegionSet+'","size": "'+$SizeSet+'","image": "'+$ImageSet+'","ssh_keys": null,"backups": false,"ipv6": true,"user_data": null,"private_networking": null}'}
+                        3 {$body = '{"name": ["'+$VMName[0]+'","'+$VMName[1]+'","'+$VMName[2]+'"],"region": "'+$RegionSet+'","size": "'+$SizeSet+'","image": "'+$ImageSet+'","ssh_keys": null,"backups": false,"ipv6": true,"user_data": null,"private_networking": null}'}
+                        4 {$body = '{"name": ["'+$VMName[0]+'","'+$VMName[1]+'","'+$VMName[2]+'","'+$VMName[3]+'"],"region": "'+$RegionSet+'","size": "'+$SizeSet+'","image": "'+$ImageSet+'","ssh_keys": null,"backups": false,"ipv6": true,"user_data": null,"private_networking": null}'}
+                        5 {$body = '{"name": ["'+$VMName[0]+'","'+$VMName[1]+'","'+$VMName[2]+'","'+$VMName[3]+'","'+$VMName[4]+'"],"region": "'+$RegionSet+'","size": "'+$SizeSet+'","image": "'+$ImageSet+'","ssh_keys": null,"backups": false,"ipv6": true,"user_data": null,"private_networking": null}'}
+                        default {}
+                    }
+                Invoke-WebRequest -Uri https://api.digitalocean.com/v2/droplets -Method POST -Headers @{"Content-Type" = "application/json";"Authorization" = "Bearer $Token"} -Body $body 
+                }
+            else {
+                $body = '{"name": "'+$VMName+'","region": "'+$RegionSet+'","size": "'+$SizeSet+'","image": "'+$ImageSet+'","ssh_keys": null,"backups": false,"ipv6": true,"user_data": null,"private_networking": null}'
+                Invoke-WebRequest -Uri https://api.digitalocean.com/v2/droplets -Method POST -Headers @{"Content-Type" = "application/json";"Authorization" = "Bearer $Token"} -Body $body  
+                }
+            }
+        }
+        "Google" {
+            # Image
+            switch ($Image) {
+                "debian" {
+                    $ImageSet = (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/debian-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
+                }
+                "centos" {
+                    $ImageSet = (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/centos-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
+                }
+                "opensuse" {
+                    $ImageSet = (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/opensuse-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
+                }
+                "red(-)hat" {
+                    $ImageSet = (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/rhel-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
+                }
+                "ubuntu" {
+                    $ImageSet = (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects$Project/ubuntu-os-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
+                }
+                "Windows" {
+                    $ImageSet = (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/windows-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
+                }
+                default {}
+            }
+            # Size
+            $SizeSet = ((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/zones/$Region/machineType -Method Get -Headers @{"Authorization" = "Bearer " + $Token}).content | ConvertFrom-Json | where name -Match $Size).selfLink
+            # Region
+            $RegionSet = (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/regions -Headers @{"Authorization" = "Bearer " + $Token} -Method Get).content | ConvertFrom-Json | where items -Match "$Region" ).items)
+            # Instance creation
+            $Body = '{
+                "name": "'+$VMName+'",
+                "machineType": "'+$SizeSet+'",
+                "networkInterfaces": 
+                    [{"accessConfigs": 
+                        [{"type": "ONE_TO_ONE_NAT","name": "External NAT"}],
+                    "network": "global/networks/default"}],
+                    "disks": 
+                    [{"autoDelete": "true",
+                        "boot": "true",
+                        "type": "PERSISTENT",
+                        "initializeParams": 
+                        {"sourceImage": "'+$ImageSet+'"}
+                    }]
+                }'
+            Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/zones/$Zone/instances?key=$Key -Method POST -Headers @{"ContentType" = "application/json";"Content-Type" = "application/x-www-form-urlencoded";"Authorization" = "Bearer " + $Token} -body $Body
+        }
+        default {}
     }
 }

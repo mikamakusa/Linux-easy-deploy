@@ -815,7 +815,7 @@ function PacMan {
                                         "boot": "true",
                                         "type": "PERSISTENT",
                                         "initializeParams": 
-                                        {"sourceImage": "'+$Image+'"}
+                                        {"sourceImage": "'+$ImageSet+'"}
                                     }]
                                 }'
                         Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/zones/$Zone/instances?key=$Key -Method POST -Headers @{"ContentType" = "application/json";"Content-Type" = "application/x-www-form-urlencoded";"Authorization" = "Bearer " + $Token} -body $Body
