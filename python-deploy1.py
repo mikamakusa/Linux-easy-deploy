@@ -1,7 +1,9 @@
 import csv
 import os
 import unixpackage
-from pssh import ParallelSSHClient
+import paramiko
+import pycrypto
+import ecdsa
 
 def deploy(file):
     f = csv.reader(open(file), delimiter=";")
@@ -12,7 +14,11 @@ def deploy(file):
         passw = row[3]
         sshport = row[4]
         for i in row[1]:
-            client = ParallelSSHClient(i)
+            ssh = paramiko.SSHClient()
+            ssh.connect(host = i,
+                    login = login,
+                    passw = passw,
+                    port = sshport)
             for p in row[5]:
                 COMMAND = unixpackage.install([p], polite=True)
-                client.run_command(COMMAND, sudo=True)
+                ssh.exec_command(COMMAND, sudo=True)
