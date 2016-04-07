@@ -1,3 +1,4 @@
+# Version 0.8
 function Install-MSIFile {
     [CmdletBinding()]
     Param(
