@@ -29,7 +29,7 @@ function Install-MSIFile {
         Write-Verbose "installer exit code  $($process.ExitCode) for file  $($msifile)"
     }
 }
-function GNU_Install {
+function Package {
     Param(
         [Parameter(Mandatory=$true,position = 0)][string]$IP,
         [Parameter(Mandatory=$true,Position = 1)][string]$Username,
@@ -44,8 +44,7 @@ function GNU_Install {
         iex (New-Object Net.WebClient).DownloadString("https://gist.github.com/darkoperator/6152630/raw/c67de4f7cd780ba367cccbc2593f38d18ce6df89/instposhsshdev")
     } 
     Import-Module Posh-SSH
-
-    $credentials = New-Object System.Management.Automation.PSCredential($username,$password)
+    
     ## Package Manager available for linux distributions
     $packman = "apt-get","zypper","yum","urpmi","slackpkg","slapt-get","netpkg","equo","pacman","conary","apk","emerge","lin","cast","nix","xbps-install"
     foreach ($i in $packman) {
@@ -141,13 +140,13 @@ function GNU_Install {
         }
         else {return "Operation Impossible"}
     } 
-    New-SSHSession -ComputerName $IP -Credentials $credentials -Port $Port
+    
     Invoke-SSHCommand -SessionId (Get-SSHSession).SessionId -Command "$Action $Package"
 }
 function Provider {
     Param(
+        [Parameter(Mandatory=$true,position = 0)][string]$Name,
         [Parameter(Mandatory=$true,position = 0)][ValidateSet("Insert","Remove","Reboot","Rebuild")][string]$Action,
-        [Parameter(Mandatory=$false)][string]$Name,
         [Parameter(Mandatory=$false)][string]$VMName,
         [Parameter(Mandotory=$false)][string]$Image,
         [Parameter(Mandatory=$false)][string]$Size,
@@ -163,8 +162,7 @@ function Provider {
         [Parameter(Mandatory=$false)][string]$SecretKey,
         [Parameter(Mandatory=$false)][string]$ServerId,
         [Parameter(Mandatory=$false)][string]$Zone,
-        [Parameter(Mandatory=$false)][ValidateSet("Classic","VPC")][string]$EC2Type,
-        [Parameter(Mandatory=$false)][string]$language,
+        [Parameter(Mandatory=$false)][ValidateSet("Classic","VPC")][string]$EC2Type
     )
     switch ($Name) {
         "Cloudwatt" {
@@ -342,7 +340,7 @@ function Provider {
                                 {"sourceImage": "'+$ImageSet+'"}
                             }]
                         }'
-                    Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/zones/$Zone/instances?key=$Key -Method POST -Headers @{"ContentType" = "application/json";"Content-Type" = "application/x-www-form-urlencoded";"Authorization" = "Bearer " + $Token} -body $Body
+                    Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/zones/$Zone/instances -Method POST -Headers @{"ContentType" = "application/json";"Content-Type" = "application/x-www-form-urlencoded";"Authorization" = "Bearer " + $Token} -body $Body
                 }
                 "Remove" {
                     Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/zones/$Zone/instances/$ServerId -Method Delete -Headers @{"ContentType" = "application/json";"Content-Type" = "application/x-www-form-urlencoded";"Authorization" = "Bearer " + $Token}
@@ -416,8 +414,8 @@ function Provider {
 function Tools {
     Param(
         [Parameter(Mandatory=$true,position = 0)][ValidateSet("Container","Network","Discovery","Cluster")]$Type,
-        [Parameter(Mandatory=$ture,position = 1)][string]$Name,
-        [Parameter(Mandatory=$ture,position = 1)][string]$Platform
+        [Parameter(Mandatory=$true,position = 1)][string]$Name,
+        [Parameter(Mandatory=$true,position = 1)][string]$Platform
     )
     switch($Type){
         "Container" {
@@ -458,6 +456,36 @@ function Tools {
         "Cluster" {
             switch($Name){}
         }
+        default {}
+    }
+}
+function PacMan ($file) {
+    switch ((import-Csv $file -Delimiter ";").Type) {
+        "Package" {
+            $IP = ((import-Csv $file -Delimiter ";").IP)
+            $Username = ((import-Csv $file -Delimiter ";").Username)
+            $Password = ((import-Csv $file -Delimiter ";").Password)
+            $Port = ((import-Csv $file -Delimiter ";").Port)
+            $Action = ((import-Csv $file -Delimiter ";").Action)
+            $Package = ((import-Csv $file -Delimiter ";").Package)
+            $credentials = New-Object System.Management.Automation.PSCredential($username,$password)
+            foreach ($i in ((import-Csv $file -Delimiter ";").IP)) {
+                New-SSHSession -ComputerName $IP -Credentials $credentials -Port $Port
+                Package -IP $i -Username $Username -Password $Password -Port $Port -Action $Action -Package $Package
+            }
+        }
+        "Provider" {
+                "Google" {
+                }
+                "Amazon" {}
+                "Rackspace" {}
+                "DigitalOcean" {}
+                "Cloudwatt" {}
+                "Numergy" {}
+                default {}
+            }
+        }
+        "Tools" {}
         default {}
     }
 }
