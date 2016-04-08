@@ -185,7 +185,7 @@ function Provider {
                     $NetworkId = (((Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/v2.0/security-groups -Method Post -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body '{"network":{"name": "network1", "admin_state_up": true}}').content | ConvertFrom-Json).network).id
                     Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/v2.0/security-groups -Method Post -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body '{"subnet":{"network_id":"'$NetworkId'","ip_version":4,"cidr":"192.168.0.0/24"}}'
                     # SSH (Keys & Auth) & Instance creation
-                    if ($Image -match "CoreOS" -or "CentOS" -or "Debian" -or "Ubuntu" -or "OpenSuse" -or "Fedora") {
+                    if ($Image -notmatch "windows") {
                         # Key
                         $Key = (((Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/$Version/$Tenant/os-keypairs -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Post -Body '{"keypair":{"name":"cle"}}').content | ConvertFrom-Json).keypair)
                         Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/$Version/security-group-rules -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Post -Body '{"security_group_rule":{"direction":"ingress","port_range_min":"22","ethertype":"IPv4","port_range_max":"22","protocol":"tcp","security_group_id":"'+$SgroupId+'"}}'
@@ -250,7 +250,7 @@ function Provider {
                     # Image
                     $ImageSet = (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/windows-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
                     # Instance creation
-                    $Body = '{"server": {"name": "'+$Name+'","imageRef": "'+$ImageSet+'","flavorRef": "'+$sizeSet+'"}}'
+                    $Body = '{"server": {"name": "'+$VMName+'","imageRef": "'+$ImageSet+'","flavorRef": "'+$sizeSet+'"}}'
                     Invoke-WebRequest -Uri https://servers.api.rackspacecloud.com/v1.0/010101/v2/$Tenant/servers -Method Post -Headers @{"ContentType" = "application/json";"X-Auth-Token" = $TokenSet;"X-Auth-Project-Id" = $VMName} -Body $Body
                 }
                 "Remove" {}
@@ -409,6 +409,54 @@ function Provider {
                 }
                 default {}
             }
+        }
+        default {}
+    }
+}
+function Tools {
+    Param(
+        [Parameter(Mandatory=$true,position = 0)][ValidateSet("Container","Network","Discovery","Cluster")]$Type,
+        [Parameter(Mandatory=$ture,position = 1)][string]$Name,
+        [Parameter(Mandatory=$ture,position = 1)][string]$Platform
+    )
+    switch($Type){
+        "Container" {
+            switch($Name){
+                "Docker" {
+                    switch($Platform) {
+                        "Windows" {
+                            # Detect Docker Toolbox installation and launch it
+                            $vbox = New-Object -ComObject "VirtualBox.VirtualBox"
+                            $vmachine = $vbox.FindMachine(($vbox.Machines | where {$_.Name -match "default"} | select -Property Id).id)
+                            $vboxsession = New-Object -ComObject "VirtualBox.Session"
+                            $vmachine.LaunchVMProcess($vboxsession,"headless","")
+                            # Gather IP address and SSHPort  
+                            foreach ($i in (& 'C:\Program Files\Oracle\VirtualBox\VBoxManage.exe' showvminfo "default" --machinereadable)) {
+                                if ($i -match "ssh") {
+                                    return $i.split(",")
+                                    $IP = $i.Split(",")[2]
+                                    $Port = $i.Split(",")[3]
+                                }
+                            }
+                            # Launch connexion to VM "boot2docker"
+                            $credentials = New-Object System.Management.Automation.PSCredential($username,$password)
+                            New-SSHSession -ComputerName $IP -Credentials docker -Port $Port -KeyFile "C:\Users\Michael\.docker\machine\machines\default\id_rsa"
+                        }
+                        "Linux" {
+                            
+                        }
+                    }
+                }
+            }
+        }
+        "Network" {
+            switch($Name){}
+        }
+        "Discovery" {
+            switch($Name){}
+        }
+        "Cluster" {
+            switch($Name){}
         }
         default {}
     }
