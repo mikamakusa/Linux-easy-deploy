@@ -1,4 +1,4 @@
-# Version 0.8
+# Version 0.9
 function Install-MSIFile {
     [CmdletBinding()]
     Param(
@@ -282,7 +282,6 @@ function Provider {
                         Invoke-WebRequest -Uri https://api.digitalocean.com/v2/droplets -Method POST -Headers @{"Content-Type" = "application/json";"Authorization" = "Bearer $Token"} -Body $body
                         }
                     }
-                }
                 "Remove" {
                     Invoke-WebRequest -Uri https://api.digitalocean.com/v2/droplets/$ServerId -Method Delete -Headers @{"Content-Type" = "application/json";"Authorization" = "Bearer $Token"}
                 }
@@ -294,6 +293,7 @@ function Provider {
                     Invoke-WebRequest -Uri https://api.digitalocean.com/v2/droplets/$ServerId/actions -Method Post -Headers @{"Content-Type" = "application/json";"Authorization" = "Bearer $Token"} -Body '{"type":"rebuild","image":"'+$ImageSet+'"}'
                 }
                 default {}
+            }
         }
         "Google" {
             switch ($Action) {
@@ -380,7 +380,7 @@ function Provider {
                         "Classic" {
                             New-EC2SecurityGroup -GroupName "Security" -GroupDescription "EC2-Classic from PowerShell" -AccessKey $AccessKey -SecretKey $SecretKey -Region $Zone
                             $Group = (Get-EC2SecurityGroup -GroupNames "Security" -AccessKey $AccessKey -SecretKey $SecretKey -Region $Zone).GroupId
-                            New-EC2Instance -ImageId $ImageSet -MinCount 1 -MaxCount $Number -KeyName $KeyPair -SecurityGroup $Group -InstanceType -AccessKey $AccessKey -SecretKey $SecretKey -Region $Zone
+                            New-EC2Instance -ImageId $ImageSet -MinCount 1 -MaxCount $Number -KeyName $KeyPair -SecurityGroup $Group -InstanceType t1.micro -AccessKey $AccessKey -SecretKey $SecretKey -Region $Zone
                         }
                         "VPC" {
                             New-EC2SecurityGroup -GroupName "Security" -GroupDescription "EC2-VPC from PowerShell" -AccessKey $AccessKey -SecretKey $SecretKey -Region $Zone
@@ -394,7 +394,7 @@ function Provider {
                             $ip2.FromPort = 3389
                             $ip2.ToPort = 3389
                             Grant-EC2SecurityGroupIngress -GroupId $Group -IpPermissions @($ip1, $ip2)
-                            New-EC2Instance -ImageId $ImageSet -MinCount 1 -MaxCount $Number -KeyName $KeyPair -SecurityGroup $Group -InstanceType -AccessKey $AccessKey -SecretKey $SecretKey -Region $Zone
+                            New-EC2Instance -ImageId $ImageSet -MinCount 1 -MaxCount $Number -KeyName $KeyPair -SecurityGroup $Group -InstanceType t1.micro -AccessKey $AccessKey -SecretKey $SecretKey -Region $Zone
                         }
                         default {}
                     }
@@ -448,13 +448,13 @@ function Tools {
             }
         }
         "Network" {
-            switch($Name){}
+            
         }
         "Discovery" {
-            switch($Name){}
+            
         }
         "Cluster" {
-            switch($Name){}
+            
         }
         default {}
     }
@@ -475,17 +475,83 @@ function PacMan ($file) {
             }
         }
         "Provider" {
-                "Google" {
+            $Name = ((import-Csv $file -Delimiter ";").Name)
+            $Action = ((import-Csv $file -Delimiter ";").Action)
+            $VMName = ((import-Csv $file -Delimiter ";").VMName)
+            $Image = ((import-Csv $file -Delimiter ";").Image)
+            $Size = ((import-Csv $file -Delimiter ";").Size)
+            $Region = ((import-Csv $file -Delimiter ";").Region)
+            $Password = ((import-Csv $file -Delimiter ";").Password)
+            $Number = ((import-Csv $file -Delimiter ";").Number)
+            $Token = ((import-Csv $file -Delimiter ";").Token)
+            $Tenant = ((import-Csv $file -Delimiter ";").Tenant)
+            $Username = ((import-Csv $file -Delimiter ";").Username)
+            $APIKey = ((import-Csv $file -Delimiter ";").APIKey)
+            $Project = ((import-Csv $file -Delimiter ";").Project)
+            $AccessKey = ((import-Csv $file -Delimiter ";").AccessKey)
+            $SecretKey = ((import-Csv $file -Delimiter ";").SecretKey)
+            $ServerId = ((import-Csv $file -Delimiter ";").ServerId)
+            $Zone = ((import-Csv $file -Delimiter ";").Zone)
+            $EC2Type = ((import-Csv $file -Delimiter ";").EC2Type)
+            switch ($Name) {
+                "Cloudwatt" {
+                    switch ($Action) {
+                        "Insert" {Provider -Name $Name -Action $Action -Tenant $Tenant -Token $Token -VMName $VMName -Image $Image -Size $Size}
+                        "Remove" {Provider -Name $Name -Action $Action -Tenant $Tenant -Token $Token ServerId $ServerId}
+                        "Reboot" {Provider -Name $Name -Action $Action -Tenant $Tenant -Token $Token ServerId $ServerId}
+                        "Rebuild" {Provider -Name $Name -Action $Action -Tenant $Tenant -Token $Token -VMName $VMName -Image $Image -Size $Size}
+                        default {}
+                    }
                 }
-                "Amazon" {}
-                "Rackspace" {}
-                "DigitalOcean" {}
-                "Cloudwatt" {}
-                "Numergy" {}
+                "Numergy" {
+                    switch ($Action) {
+                        "Insert" {Provider -Name $Name -Action $Action -Tenant $Tenant -Token $Token -VMName $VMName -Image $Image -Size $Size}
+                        "Remove" {Provider -Name $Name -Action $Action -Tenant $Tenant -Token $Token ServerId $ServerId}
+                        "Reboot" {Provider -Name $Name -Action $Action -Tenant $Tenant -Token $Token ServerId $ServerId}
+                        "Rebuild" {Provider -Name $Name -Action $Action -Tenant $Tenant -Token $Token -VMName $VMName -Image $Image -Size $Size}
+                        default {}
+                    }
+                }
+                "DigitalOcean" {
+                    switch ($Action) {
+                        "Insert" {Provider -Name $Name -Action $Action -Token $Token -VMName $VMName -Image $Image -Size $Size -Region $Region -Number $Number}
+                        "Remove" {Provider -Name $Name -Action $Action -Token $Token ServerId $ServerId}
+                        "Reboot" {Provider -Name $Name -Action $Action -Token $Token ServerId $ServerId}
+                        "Rebuild" {Provider -Name $Name -Action $Action -Token $Token -VMName $VMName -Image $Image}
+                        default {}
+                    }
+                }
+                "Rackspace" {
+                    switch ($Action) {
+                        "Insert" {Provider -Name $Name -Action $Action -Tenant $Tenant -Token $Token -VMName $VMName -Image $Image -Size $Size}
+                        "Remove" {Provider -Name $Name -Action $Action -Tenant $Tenant -Token $Token ServerId $ServerId}
+                        "Reboot" {Provider -Name $Name -Action $Action -Tenant $Tenant -Token $Token ServerId $ServerId}
+                        "Rebuild" {Provider -Name $Name -Action $Action -Tenant $Tenant -Token $Token -VMName $VMName -Image $Image -Size $Size}
+                        default {}
+                    }
+                }
+                "Google" {
+                    switch ($Action) {
+                        "Insert" {Provider -Name $Name -Action $Action -Token $Token -VMName $VMName -Image $Image -Size $Size -Region $Region}
+                        "Remove" {Provider -Name $Name -Action $Action -Token $Token ServerId $ServerId}
+                        "Reboot" {Provider -Name $Name -Action $Action -Token $Token ServerId $ServerId}                        
+                        default {}
+                    }
+                }
+                "Amazon" {
+                    switch ($Action) {
+                        "Insert" {Provider -Name $Name -Action $Action -AccessKey $AccessKey -SecretKey $SecretKey -Number $Number -EC2Type $EC2Type -VMName $VMName -Image $Image -Size $Size -Region $Zone}
+                        "Remove" {Provider -Name $Name -Action $Action -AccessKey $AccessKey -SecretKey $SecretKey -Region $Zone -Instance $ServerId}
+                        "Reboot" {Provider -Name $Name -Action $Action -AccessKey $AccessKey -SecretKey $SecretKey -Region $Zone -Instance $ServerId}                        
+                        default {}
+                    }
+                }
                 default {}
             }
         }
-        "Tools" {}
+        "Tools" {
+            
+        }
         default {}
     }
 }
