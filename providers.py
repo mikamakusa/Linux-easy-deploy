@@ -1,6 +1,10 @@
 import requests
 
-class Numergy():
-
-    def __init__(self):
-     self.version = (request.get("https://api2.numergy.com/")).json()
+def GetVersion():
+    _method = "GET"
+    _url = "https://api2.numergy.com/"
+    h = {"ContentType": "application/json"}
+    request = requests.get(_url,headers=h)
+    data = request.json()
+    print (data)
+    print (data['versions'][4]['id'])

@@ -222,7 +222,7 @@ function Provider {
                     # Token
                     $Nversion = ((Invoke-WebRequest -Uri "https://api2.numergy.com/" -ContentType "application/json; charset=utf-8" -Method Get | ConvertFrom-Json).versions | select -Property id,status -Last 1).id
                     $Tbody = '{"auth": {"apiAccessKeyCredentials": {"accessKey": "'+$AccessKey+'","secretKey": "'+$SecretKey+'" },"tenantId": "'+$tenantId+'" } }'
-                    $Token = (((((Invoke-WebRequest -Uri "https://api2.numergy.com/V3.0/tokens" -ContentType "application/json; charset=utf-8" -Method Post -Body $TBody) | ConvertFrom-Json).access).token).id)
+                    $Token = (((((Invoke-WebRequest -Uri "https://api2.numergy.com/$Nversion/tokens" -ContentType "application/json; charset=utf-8" -Method Post -Body $TBody) | ConvertFrom-Json).access).token).id)
                     # Size
                     $SizeSet = ((((Invoke-WebRequest -Uri http://api2.numergy.com/$Version/$Tenant/flavors -Headers @{"ContentType" = "application/json; charset=utf-8";"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Get).content) | ConvertFrom-Json).flavors | where name -EQ "$Size").id
                     # Image
@@ -230,7 +230,7 @@ function Provider {
                     # Instance creation
                     $Uri = https://api2.numergy.com/$Nversion/$TenantID/servers
                     $Body = '{"server": {"flavorRef": "'+$SizeSet+'","imageRef": "'+$ImageSet+'","name": "'+$VMName+'"}}'
-                    Invoke-WebRequest -Uri https://api2.numergy.com/$Nversion/$TenantID/servers -Method Post -Headers @{"ContentType" = "application/json; charset=utf-8";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body $Body
+                    Invoke-WebRequest -Uri $Uri -Method Post -Headers @{"ContentType" = "application/json; charset=utf-8";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body $Body
                 }
                 "Remove" {}
                 "Reboot" {}
