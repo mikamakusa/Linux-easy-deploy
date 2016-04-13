@@ -1,4 +1,12 @@
+import boto
+from boto import ec2
+from boto.ec2 import image
+from boto.ec2 import regions
+from boto.ec2 import EC2Connection
 import requests
+import datetime
+
+now = datetime.datetime.now()
 
 def Numergy(AccessKey,SecretKey,TenantId,Image,Flavor,ServerName):
     ## Get Version
@@ -145,7 +153,7 @@ def DigitalOcean(Token,Image,Region,Size,ServerName):
     _body = '{"name": "%s","region": "%s","size": "%s","image": "%s","ssh_keys": null,"backups": false,"ipv6": true,"user_data": null,"private_networking": null}'%(ServerName,RegionId,SizeId,ImageId)
     requests.post("https://api.digitalocean.com/v2/droplets",headers={"Authorization" : "Bearer %s"}%(Token),data=_body)
 
-def Google(Image,Project,Token,Region,ServerName,Size):
+def Google(Image,Project,Token):
     ## Get ImageId
     request = requests.get("https://www.googleapis.com/compute/v1/projects/%s/%s-cloud/global/images"%(Project,Image),header={"Authorization" : "Bearer %s"}%(Token))
     data = request.json()
@@ -168,4 +176,41 @@ def Google(Image,Project,Token,Region,ServerName,Size):
     _body = '{"name": "%s","machineType": "%s","networkInterfaces": [{"accessConfigs": [{"type": "ONE_TO_ONE_NAT","name": "External NAT"}],"network": "global/networks/default"}],"disks": [{"autoDelete": "true","boot": "true","type": "PERSISTENT","initializeParams": {"sourceImage": "%s"}}]}'%(ServerName,SizeId,ImageId)
     requests.post("https://www.googleapis.com/compute/v1/projects/%s/zones/%s/instances"%(Project,RegionId),header={"Authorization" : "Bearer %s"}%(Token),data=_body)
 
-def Amazon():
+def Amazon(AccessKey,SecretKey,Region,Image,Number):
+    date_now = now.strftime
+    date_owa = datetime.now - timedelta(days=1)
+    ## Get Regions
+    AWS_region_list = regions(aws_access_key_id=AccessKey, aws_secret_access_key=SecretKey)
+    for i in AWS_region_list:
+        RegionId = i.name
+    AWS_connection = ec2.connect_to_region(RegionId)
+    ## Get ImageId
+    AWS_Image = AWS_connection.get_all_images(filter={'virtualization_type':'hvm','state':'available'})
+    if "windows server" in Image:
+        for i in AWS_GetImage:
+            if "2003" in Image and 'Windows_Server-2003-R2_SP2-English-64Bit-Base-' in i.image_location:
+                ImageId = i.id
+            elif "2008" in Image and 'Windows_Server-2008-R2_SP1-English-64Bit-Base-' in i.image_location:
+                ImageId = i.id
+            elif "2012" in Image and 'Windows_Server-2012-R2_RTM-English-64Bit-Base-' in i.image_location:
+                ImageId = i.id
+    elif "ubuntu" in Image:
+        for i in AWS_GetImage:
+            if "ubuntu-eu-central-1/images/hvm-instance/" in i.image_location:
+                ImageId = i.id
+    elif "centos" in Image:
+        for i in AWS_GetImage:
+            if "CentOS Atomic Host 7" in i.name:
+                ImageId = i.id
+    elif "debian" in Image:
+        for i in AWS_GetImage:
+            if "debian-jessie" in i.name:
+                ImageId = i.id
+    elif "fedora" in Image:
+        for i in AWS_GetImage:
+            if "125523088429/Fedora-Cloud-Base-23-%s"%(date_owa) in i.image_location and "standard" in i.name:
+            ImageId = i.id
+    elif "gentoo" in Image:
+            ImageId = "ami-4c7d9a23"
+    ## Instances creation
+    EC2Connection.run_instances(ImageId,min_count=1,max_count=Number,instance_type='m1.small')
