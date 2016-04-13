@@ -168,20 +168,21 @@ function Provider {
         "Cloudwatt" {
             switch ($Action) {
                 "Insert" {
+                    # Version
+                    $Version = (((Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/ -Method Get).content | ConvertFrom-Json).versions).id
                     # Token
                     [xml]$auth = "<?xml version='1.0' encoding='UTF-8'?><auth xmlns='http://docs.openstack.org/identity/v2.0' tenantName='$Tenant'><passwordCredentials username='$Username' password='$Password'/></auth>"
-                    [xml]$TokenRequest = Invoke-WebRequest -Uri "https://identity.fr1.cloudwatt.com/v2.0/tokens" -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json"} -Body $auth
+                    [xml]$TokenRequest = Invoke-WebRequest -Uri "https://identity.fr1.cloudwatt.com/$Version/tokens" -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json"} -Body $auth
                     $Token = $TokenRequest.access.token.id
-                    $Version = (((Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/ -Method Get).content | ConvertFrom-Json).versions).id
                     # Image
                     $ImageSet = (((Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/$Version/$Tenant/images -Method Get -Headers @{"X-Auth-Token" = '"'+$Token+'"'}).content | ConvertFrom-Json).images | where name -EQ "$Image").id
                     # Size
                     $SizeSet = (((Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/$Version/$Tenant/flavors -Method Get -Headers @{"X-Auth-Token" = '"'+$Token+'"'}).content | ConvertFrom-Json).flavors | where name -Match "$Size").id
                     # Security Group
-                    $SGroup = (((Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/v2.0/security-groups -Method Post -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body '{"security_group":{"name":"Security","description":"SecGroup"}}').content | ConvertFrom-Json).security_group).name
+                    $SGroup = (((Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/$Version/security-groups -Method Post -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body '{"security_group":{"name":"Security","description":"SecGroup"}}').content | ConvertFrom-Json).security_group).name
                     # Network
-                    $NetworkId = (((Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/v2.0/security-groups -Method Post -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body '{"network":{"name": "network1", "admin_state_up": true}}').content | ConvertFrom-Json).network).id
-                    Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/v2.0/security-groups -Method Post -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body '{"subnet":{"network_id":"'$NetworkId'","ip_version":4,"cidr":"192.168.0.0/24"}}'
+                    $NetworkId = (((Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/$Version/security-groups -Method Post -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body '{"network":{"name": "network1", "admin_state_up": true}}').content | ConvertFrom-Json).network).id
+                    Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/$Version/security-groups -Method Post -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body '{"subnet":{"network_id":"'$NetworkId'","ip_version":4,"cidr":"192.168.0.0/24"}}'
                     # SSH (Keys & Auth) & Instance creation
                     if ($Image -notmatch "windows") {
                         # Key
@@ -194,7 +195,7 @@ function Provider {
                         $ServerId = (((Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/$Version/$Tenant/servers -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Post -Body '{"server":{"name":"'+$VMName+'","key_name":"cle","imageRef":"'+$ImageSet+'","flavorRef":"'+$SizeSet+'","max_count":'+$Number+',"min_count":1,"networks":[{"uuid":"'+$NetworkId+'"}],"metadata": {"admin_pass": "'+$Password+'"},"security_groups":[{"name":"default"},{"name":"'+$Sgroup+'"}]}}').content | ConvertFrom-Json).server).id
                     }
                     $NetId = ((((Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/$Version/networks -ContentType "application/json" -Method GET -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'}).content | ConvertFrom-Json).networks).id | where name -EQ "public")
-                    $IP = ((((Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/$Version/floatingips -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body '{"floatingip":{"floating_network_id":"'+$NetId+'"}}'.content) | ConvertFrom-Json).floatingip).floating_ip_address)
+                    $IP = (((((Invoke-WebRequest -Uri https://network.fr1.cloudwatt.com/$Version/floatingips -ContentType "application/json" -Method Post -Headers @{"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body '{"floatingip":{"floating_network_id":"'+$NetId+'"}}').content) | ConvertFrom-Json).floatingip).floating_ip_address)
                     Invoke-WebRequest -Uri https://compute.fr1.cloudwatt.com/$Version/$Tenant/servers/$ServerId/action -Method Post -Headers @{"ContentType" = "application/json" ;"Accept" = "application/json";"X-Auth-Token" = '"'+$TokenSet+'"'} -Body '{"addFloatingIp":{"address":"'+$IP+'"}}'
                 }
                 "Remove" {
@@ -242,14 +243,14 @@ function Provider {
             switch ($Action) {
                 "Insert" {
                     # Token
-                    $Token = (((((Invoke-WebRequest -Uri "https://identity.api.rackspacecloud.com/v2.0/tokens" -ContentType "application/json" -Body "'"+'{"auth":{"RAX-KSKEY:apiKeyCredentials":{"username":"'+$Username+'","apiKey":"'+$apiKey+'"}}}'+"'") | ConvertFrom-Json).access).token).id)
+                    $Token = (((((Invoke-WebRequest -Uri https://identity.api.rackspacecloud.com/v2.0/tokens -Method Post -ContentType "application/json" -Body '{"auth":{"RAX-KSKEY:apiKeyCredentials":{"username":"'+$Username+'","apiKey":"'+$apiKey+'"}}}') | ConvertFrom-Json).access).token).id)
                     # Size 
-                    $SizeSet = ((((Invoke-WebRequest -Uri https://dfw.servers.api.rackspacecloud.com/v2/$Tenant/flavors -Headers -Headers @{"ContentType" = "application/json; charset=utf-8";"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Get).content) | ConvertFrom-Json).flavors | where name -EQ "$Size").id
+                    $SizeSet = ((((Invoke-WebRequest -Uri https://lon.servers.api.rackspacecloud.com/v2/$Tenant/flavors -Mehod Get -Headers -Headers @{"ContentType" = "application/json; charset=utf-8";"X-Auth-Token" = '"'+$TokenSet+'"'} -Method Get).content) | ConvertFrom-Json).flavors | where name -EQ "$Size").id
                     # Image
-                    $ImageSet = (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/windows-cloud/global/images -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
+                    $ImageSet = (((Invoke-WebRequest -Uri https://lon.servers.api.rackspacecloud.com/v2/$Tenant/images -Method Get -Headers @{"Authorization" = "Bearer " + $Token} -Method Get ).content | ConvertFrom-Json).items | where selfLink -Match "$Image" | select -Last 1)
                     # Instance creation
                     $Body = '{"server": {"name": "'+$VMName+'","imageRef": "'+$ImageSet+'","flavorRef": "'+$sizeSet+'"}}'
-                    Invoke-WebRequest -Uri https://servers.api.rackspacecloud.com/v1.0/010101/v2/$Tenant/servers -Method Post -Headers @{"ContentType" = "application/json";"X-Auth-Token" = $TokenSet;"X-Auth-Project-Id" = $VMName} -Body $Body
+                    Invoke-WebRequest -Uri https://lon.servers.api.rackspacecloud.com/v2/$Tenant/servers -Method Post -Headers @{"ContentType" = "application/json";"X-Auth-Token" = $TokenSet;"X-Auth-Project-Id" = $VMName} -Body $Body
                 }
                 "Remove" {}
                 "Reboot" {}
@@ -320,10 +321,10 @@ function Provider {
                         }
                         default {}
                     }
-                    # Size
-                    $SizeSet = ((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/zones/$Region/machineType -Method Get -Headers @{"Authorization" = "Bearer " + $Token}).content | ConvertFrom-Json | where name -Match $Size).selfLink
                     # Region
-                    $RegionSet = (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/regions -Headers @{"Authorization" = "Bearer " + $Token} -Method Get).content | ConvertFrom-Json | where items -Match "$Region" ).items)
+                    $RegionSet = (((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/regions -Headers @{"Authorization" = "Bearer " + $Token} -Method Get).content | ConvertFrom-Json | where items -Match "$Region" ).SelfLink)
+                    # Size
+                    $SizeSet = ((Invoke-WebRequest -Uri https://www.googleapis.com/compute/v1/projects/$Project/zones/$RegionSet/machineType -Method Get -Headers @{"Authorization" = "Bearer " + $Token}).content | ConvertFrom-Json | where name -Match $Size).selfLink
                     # Instance creation
                     $Body = '{
                         "name": "'+$VMName+'",
