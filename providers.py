@@ -18,29 +18,29 @@ def Numergy(AccessKey,SecretKey,TenantId,Image,Flavor,ServerName,ServerId,**acti
                 version = i['id']
         ## Get Token
         _body = '{"auth": {"apiAccessKeyCredentials": {"accessKey": "%s","secretKey": "%s" },"tenantId": "%s"}}'%(AccessKey,SecretKey,TenantId)
-        request = requests.post("https://api2.numergy.com/%s/tokens"%(version), data=_body)
+        request = requests.post("https://api2.numergy.com/%s/tokens" % version, data=_body)
         data = request.json()
         token = (data['access']['token']['id'])
         ## Get ImageId
-        request = requests.get("https://api2.numergy.com/%s/%s/images"%(version,TenantId),headers={"X-Auth-Token" : "%s"%(token)})
+        request = requests.get("https://api2.numergy.com/%s/%s/images" % (version,TenantId), headers={"X-Auth-Token" : "%s" % token})
         data = request.json()
         for i in (data['images']):
             if Image in i['name']:
                 ImageId = i['id']
         ## Get FlavorId
-        request = requests.get("https://api2.numergy.com/%s/%s/images"%(version,TenantId),headers={"X-Auth-Token" : "%s"%(token)})
+        request = requests.get("https://api2.numergy.com/%s/%s/images" % (version,TenantId), headers={"X-Auth-Token" : "%s" % token})
         data = request.json()
         for i in (data["flavors"]):
             if Flavor in i["name"]:
                 FlavorId = i['id']
         ## Server Creation
         _body = '{"server": {"flavorRef": %s,"imageRef": %s,"name": %s,"password_delivery": API}}'%(FlavorId,ImageId,ServerName)
-        requests.post("https://api2.numergy.com/%s/%s/servers"%(version,TenantId),headers={"X-Auth-Token" : "%s"%(token)}, data=_body)
+        requests.post("https://api2.numergy.com/%s/%s/servers" % (version,TenantId), headers={"X-Auth-Token" : "%s" % token}, data=_body)
     elif action.get("Reboot"):
         _body = '{"reboot": {"type": "SOFT"}}'
         requests.post("https://compute.fr1.cloudwatt.com/%s/%s/servers/%s/reboot"%(version,TenantId,ServerId),data=_body,headers={"X-Auth-Token" : "%s"%(token)})
     elif action.get("Remove"):
-        requests.delete("https://compute.fr1.cloudwatt.com/%s/%s/servers/%s"%(version,TenantId,ServerId),headers={"X-Auth-Token" : "%s"%(token)})
+        requests.delete("https://compute.fr1.cloudwatt.com/%s/%s/servers/%s" %(version,TenantId,ServerId), headers={"X-Auth-Token" : "%s" %token})
     elif action.get("Rebuild"):
         _body = '{"server": {"flavorRef": %s,"imageRef": %s,"name": %s,"password_delivery": API}}'%(FlavorId,ImageId,ServerName)
         requests.post("https://api2.numergy.com/%s/%s/servers" %(version,TenantId),headers={"X-Auth-Token": "%s"%(token)},data=_body)
@@ -120,24 +120,24 @@ def Rackspace(username,apikey,TenantId,Image,Flavor,ServerName,**action):
             version = i['id']
     ## Get Token
     _body = '{"auth":{"RAX-KSKEY:apiKeyCredentials":{"username":"%s","apiKey":"%s"}}}'%(username,apikey)
-    request = request.post("https://identity.api.rackspacecloud.com/%s/tokens"%(version))
+    request = request.post("https://identity.api.rackspacecloud.com/%s/tokens" %version,data=_body)
     data = request.json()
     Token = data['access']['token']['id']
     ## Get Image Id
-    request = requests.get("https://lon.servers.api.rackspacecloud.com/v2/%s/images"%(tenantId),headers={"Authorization" : "Bearer %s"%(token)})
+    request = requests.get("https://lon.servers.api.rackspacecloud.com/v2/%s/images"%(tenantId),headers={"Authorization" : "Bearer %s"%(Token)})
     data = request.json()
     for i in (data['images']):
         if Image in i['name']:
             ImageId = i['id']
     ## Get FlavorId
-    request = requests.get("https://lon.servers.api.rackspacecloud.com/v2/%s/flavors"%(token),headers={"Authorization" : "Bearer %s"%(token)})
+    request = requests.get("https://lon.servers.api.rackspacecloud.com/v2/%s/flavors"%(token),headers={"Authorization" : "Bearer %s"%(Token)})
     data = request.json()
     for i in (data['flavors']):
         if Flavor in i['name']:
             FlavorId = i['id']
     ## Server Creation
     _body = '{"server": {"name": "%s","imageRef": "%s","flavorRef": "%s"}}'%(ServerName,ImageId,FlavorId)
-    request = requests.post("https://lon.servers.api.rackspacecloud.com/v2/%s/servers"%(tenantId),headers={"Authorization" : "Bearer %s"%(token)},data=_body)
+    requests.post("https://lon.servers.api.rackspacecloud.com/v2/%s/servers"%(TenantId),headers={"Authorization" : "Bearer %s"%(Token)},data=_body)
 
 def DigitalOcean(Token,Image,Region,Size,ServerName,**action):
     ## Get ImageId
