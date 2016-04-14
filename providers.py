@@ -5,8 +5,19 @@ from boto.ec2 import regions
 from boto.ec2 import EC2Connection
 import requests
 
-class Numergy(AccessKey,SecretKey,TenantId,Image,OsVer,OsRole,Flavor,ServerName,ServerId,action):
-    global AccessKey,SecretKey,TenantId,Image,OsVer,OsRole,Flavor,ServerName,ServerId,action
+class Numergy(object):
+    def __init__(self,AccessKey,SecretKey,TenantId,Image,OsVer,OsRole,Flavor,ServerName,ServerId,action):
+        self.AccessKey = AccessKey
+        self.SecretKey = SecretKey
+        self.TenantId = TenantId
+        self.Image = Image
+        self.OsVer = OsVer
+        self.OsRole = OsRole
+        self.Flavor = Flavor
+        self.ServerName = ServerName
+        self.ServerId = ServerId
+        self.action = action
+    #global AccessKey,SecretKey,TenantId,Image,OsVer,OsRole,Flavor,ServerName,ServerId,action
     ## Get Version
     request = requests.get("https://api2.numergy.com/")
     data = request.json()
@@ -56,7 +67,7 @@ class Numergy(AccessKey,SecretKey,TenantId,Image,OsVer,OsRole,Flavor,ServerName,
         else: return ("error")
         for i in (data['images']):
             if ImgKey in i['name']:
-                _ImageId = i['id']
+                ImageId = i['id']
                 global ImageId
     @staticmethod
     def FlavorId(Flavor):## Get FlavorId
@@ -64,7 +75,7 @@ class Numergy(AccessKey,SecretKey,TenantId,Image,OsVer,OsRole,Flavor,ServerName,
         data = request.json()
         for i in (data["flavors"]):
             if Flavor in i["name"]:
-                _FlavorId = i['id']
+                FlavorId = i['id']
                 global FlavorId
     @staticmethod
     def Server(ServerName,ServerId,ImageId,FlavorId,**action):## Server Creation
@@ -82,8 +93,21 @@ class Numergy(AccessKey,SecretKey,TenantId,Image,OsVer,OsRole,Flavor,ServerName,
         else:
             return ('error')
 
-class Cloudwatt(Username,Password,TenantId,Image,Flavor,ServerId,ServerName,Number,ServPass,action):
-    global Username,Password,TenantId,Image,Flavor,ServerId,ServerName,Number,ServPass,action
+class Cloudwatt(object):
+    def __init__(self, Username,Password,TenantId,Image,Flavor,ServerId,ServerName,Number,ServPass,action):
+        self.Username = Username
+        self.Password = Password
+        self.TenantId = TenantId
+        self.Image = Image
+        self.OsVer = OsVer
+        self.OsRole = OsRole
+        self.Flavor = Flavor
+        self.ServerName = ServerName
+        self.ServerId = ServerId
+        self.Number = Number
+        self.ServPass = ServPass
+        self.action = action
+    #global Username,Password,TenantId,Image,Flavor,ServerId,ServerName,Number,ServPass,action
     @staticmethod
     def GetToken(Username,Password,TenantId):## Get Token
         _body = "<?xml version='1.0' encoding='UTF-8'?><auth xmlns='http://docs.openstack.org/identity/v2.0' tenantName='%s'><passwordCredentials username='%s' password='%s'/></auth>"%(TenantId,Username,Password)
@@ -152,7 +176,7 @@ class Cloudwatt(Username,Password,TenantId,Image,Flavor,ServerId,ServerName,Numb
             IP = data['floatinip']['floating_ip_address']
             ## Commit IP to Server
             _body = '{"addFloatingIp":{"address":"%s"}}'%(IP)
-            request = requests.post("https://compute.fr1.cloudwatt.com/v2/%s/servers/%s/action"%(TenantId,ServerId),headers={"X-Auth-Token" : "%s"%(token)},data=_body)
+            requests.post("https://compute.fr1.cloudwatt.com/v2/%s/servers/%s/action"%(TenantId,ServerId),headers={"X-Auth-Token" : "%s"%(token)},data=_body)
         elif action.get("Remove"):
             requests.delete("https://compute.fr1.cloudwatt.com/v2/%s/servers/%s"%(TenantId,ServerId),headers={"X-Auth-Token" : "%s"%(token)})
         elif action.get("Reboot"):
@@ -162,15 +186,24 @@ class Cloudwatt(Username,Password,TenantId,Image,Flavor,ServerId,ServerName,Numb
             data = request.json()
             for i in data['servers']:
                 IP = i['addresses']['private']['addr']
-                Image = i['image']['id']
+                ImageId = i['image']['id']
                 ServerName = i['name']
             _body = '{"rebuild": {"imageRef": "%s","name": "%s","adminPass": "%s","accessIPv4": "%s"}}'%(ImageId,ServerName,ServPass,IP)
             requests.post("https://compute.fr1.cloudwatt.com/v2/%s/servers/%s/rebuild"%(TenantId,ServerId),headers={"X-Auth-Token" : "%s"%(token)},data=_body)
         else:
             return ('error')
 
-class Rackspace(username,apikey,TenantId,Image,Flavor,ServerName,ServerId,action):
-    global username,apikey,TenantId,Image,Flavor,ServerName,ServerId,action
+class Rackspace(object):
+    def __init__(self, username,apikey,TenantId,Image,Flavor,ServerName,ServerId,action):
+        self.username = username
+        self.apikey = apikey
+        self.TenantId = TenantId
+        self.Image = Image
+        self.Flavor = Flavor
+        self.ServerName = ServerName
+        self.ServerId = ServerId
+        self.action = action
+    #global username,apikey,TenantId,Image,Flavor,ServerName,ServerId,action
     ## Get version
     request = requests.get("https://compute.fr1.cloudwatt.com/")
     data = request.json()
@@ -216,8 +249,17 @@ class Rackspace(username,apikey,TenantId,Image,Flavor,ServerName,ServerId,action
             requests.post("https://lon.servers.api.rackspacecloud.com/v2/%s/servers/%s"%(TenantId,ServerId),data=_body,headers={"Authorization" : "Bearer %s"%(Token)})
         else: return ("error")
 
-class DigitalOcean(Token,Image,OsVer,Region,Size,ServerName,ServerId,action):
-    global Token,Image,OsVer,Region,Size,ServerName,ServerId,action
+class DigitalOcean(object):
+    def __init__(self, Token,Image,OsVer,Region,Size,ServerName,ServerId,action):
+        self.Token = Token
+        self.OsVer = OsVer
+        self.Region = Region
+        self.Image = Image
+        self.Size = Size
+        self.ServerName = ServerName
+        self.ServerId = ServerId
+        self.action = action
+    #global Token,Image,OsVer,Region,Size,ServerName,ServerId,action
     def generate_RSA(bits=2048):
         '''
         Generate an RSA keypair with an exponent of 65537 in PEM format
@@ -241,20 +283,20 @@ class DigitalOcean(Token,Image,OsVer,Region,Size,ServerName,ServerId,action):
         data = request.json()
         if Image.get("Ubuntu"):
             if OsVer.get("15.10"): Imgkey = "ubuntu-15-10-x64"
-            elif OsVer.get("14.04"): Imgket = "ubuntu-14-04-x64"
+            elif OsVer.get("14.04"): Imgkey = "ubuntu-14-04-x64"
             else: Imgkey = "ubuntu-12-04-x64"
         if Image.get("FreeBSD"):
-            if OsVer.get("10.1") : ImgKey = "freebsd-10-1-x64"
-            else: ImgKey = "freebsd-10-2-x64"
+            if OsVer.get("10.1") : Imgkey = "freebsd-10-1-x64"
+            else: Imgkey = "freebsd-10-2-x64"
         if Image.get("Fedora"):
-            if OsVer.get("23"): ImgKey = "fedora-23-x64"
+            if OsVer.get("23"): Imgkey = "fedora-23-x64"
             else: Imgkey = "fedora-22-x64"
         if Image.get("Debian"): Imgkey = "debian-8-x64"
         if Image.get("CoreOs"): Imgkey = "coreos-beta"
         if Image.get("CentOS"):
             if OsVer.get("5"): Imgkey = "centos-5-8-x64"
             elif OsVer.get("6"): Imgkey = "centos-6-5-x64"
-            else: ImgKey = "centos-7"
+            else: Imgkey = "centos-7"
         for i in data['images']:
             if Imgkey in i['slug']:
                 ImageId = i['id']
@@ -296,8 +338,16 @@ class DigitalOcean(Token,Image,OsVer,Region,Size,ServerName,ServerId,action):
         else:
             return ('error')
 
-class Google(Image,Project,Token,Region,Size,ServerId,action):
-    global Image,Project,Token,Region,Size,ServerId,action
+class Google(object):
+    def __init__(self, Image,Project,Token,Region,Size,ServerId,action):
+        self.Token = Token
+        self.Project = Project
+        self.Region = Region
+        self.Image = Image
+        self.Size = Size
+        self.ServerId = ServerId
+        self.action = action
+    #global Image,Project,Token,Region,Size,ServerId,action
     @staticmethod
     def GetImageId(Image):## Get ImageId
         request = requests.get("https://www.googleapis.com/compute/v1/projects/%s/%s-cloud/global/images"%(Project,Image),header={"Authorization" : "Bearer %s"}%(Token))
@@ -335,8 +385,18 @@ class Google(Image,Project,Token,Region,Size,ServerId,action):
         else:
             return ("error")
 
-class Amazon(AccessKey,SecretKey,Region,Image,OsVer,OsRole,Number,ServerId,action):
-    global AccessKey,SecretKey,Region,Image,OsVer,OsRole,Number,ServerId,action
+class Amazon(object):
+    def __init__(self, AccessKey,SecretKey,Region,Image,OsVer,OsRole,Number,ServerId,action):
+        self.AccessKey = AccessKey
+        self.SecretKey = SecretKey
+        self.OsVer = OsVer
+        self.OsRole = OsRole
+        self.Region = Region
+        self.Image = Image
+        self.Number = Number
+        self.ServerId = ServerId
+        self.action = action
+    #global AccessKey,SecretKey,Region,Image,OsVer,OsRole,Number,ServerId,action
     @staticmethod
     def GetRegionId(Region):## Get Regions
         AWS_region_list = regions(aws_access_key_id=AccessKey, aws_secret_access_key=SecretKey)
@@ -350,17 +410,17 @@ class Amazon(AccessKey,SecretKey,Region,Image,OsVer,OsRole,Number,ServerId,actio
         global Imgkey
         AWS_Image = AWS_connection.get_all_images(filter={'virtualization_type':'hvm','state':'available'})
         if Image.get("Windows") and OsVer.get("2003"):
-            if OsRole.get("SQL"): ImgKey = "amazon/Windows_Server-2003-R2_SP2-English-64Bit-SQL_2005_SP4_Express-2016.03"
+            if OsRole.get("SQL"): Imgkey = "amazon/Windows_Server-2003-R2_SP2-English-64Bit-SQL_2005_SP4_Express-2016.03"
             else: Imgkey = "amazon/Windows_Server-2003-R2_SP2-English-64Bit-Base-2016.03"
         if Image.get("Windows") and OsVer.get("2008"):
             if OsRole.get("SQL"):Imgkey = "amazon/Windows_Server-2008-R2_SP1-English-64Bit-SQL_2012_SP2_Express-2016.03"
-            elif OsRole.get("Sharepoint"):ImgKey = "amazon/Windows_Server-2008-R2_SP1-English-64Bit-SharePoint_2010_SP2_Foundation-2016.03"
+            elif OsRole.get("Sharepoint"):Imgkey = "amazon/Windows_Server-2008-R2_SP1-English-64Bit-SharePoint_2010_SP2_Foundation-2016.03"
             else:Imgkey = "amazon/Windows_Server-2008-R2_SP1-English-64Bit-Base-2016.03"
         if Image.get("Windows") and OsVer.get("2012"):
             if OsRole.get("SQL"): Imgkey = "amazon/Windows_Server-2012-R2_RTM-English-64Bit-SQL_2014_SP1_Express-2016.03"
             else:Imgkey = "amazon/Windows_Server-2012-R2_RTM-English-64Bit-Base-2016.03"
         if Image.get("CentOS") and OsVer.get("7"):
-            if OsRole.get("SQL"):ImgKey = "aws-marketplace/MariaDB-10.1.13-CentOS-7-x86_64"
+            if OsRole.get("SQL"):Imgkey = "aws-marketplace/MariaDB-10.1.13-CentOS-7-x86_64"
             elif OsRole.get("docker"): Imgkey ="902703094694/Centos71_docker18"
             else : Imgkey = "410186602215/CentOS Atomic Host 7 x86_64 HVM EBS 1603_01"
         if Image.get("CentOS") and OsVer.get("6"):
@@ -387,4 +447,4 @@ class Amazon(AccessKey,SecretKey,Region,Image,OsVer,OsRole,Number,ServerId,actio
         elif action.get("Reboot"):
             EC2Connection.stop_instances(instance_ids=ServerId)
         else:
-            return ("error")
+            return "error"
