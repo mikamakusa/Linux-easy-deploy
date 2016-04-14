@@ -230,8 +230,10 @@ class DigitalOcean(Token,Image,OsVer,Region,Size,ServerName,ServerId,action):
         private_key = new_key.exportKey("PEM") 
         return private_key, public_key
         _body = '{"name":"SSH key","public_key":"%s"}'%public_key
-        key = requests.post("https://api.digitalocean.com/v2/account/keys",headers={"Authorization" : "Bearer %s"%(Token)},data=_body)
-        global key
+        requests.post("https://api.digitalocean.com/v2/account/keys",headers={"Authorization" : "Bearer %s"%(Token)},data=_body)
+        data = requests.get("https://api.digitalocean.com/v2/account/keys",headers={"Authorization" : "Bearer %s"%(Token)})
+        KeyId = data['ssh_keys']['id']
+        global KeyId
     @staticmethod
     def GetImageId(**Image,**OsVer):## Get ImageId
         global Imgkey
@@ -276,7 +278,7 @@ class DigitalOcean(Token,Image,OsVer,Region,Size,ServerName,ServerId,action):
     @staticmethod
     def Server(ServerName,ServerId,ImageId,,SizeId,RegionId,**action):## Server Creation
         if action.get("insert"):
-            _body = '{"name": "%s","region": "%s","size": "%s","image": "%s","ssh_keys": "%s","backups": false,"ipv6": true,"user_data": null,"private_networking": null}'%(ServerName,RegionId,SizeId,ImageId,Key)
+            _body = '{"name": "%s","region": "%s","size": "%s","image": "%s","ssh_keys": "%s","backups": false,"ipv6": true,"user_data": null,"private_networking": null}'%(ServerName,RegionId,SizeId,ImageId,KeyId)
             requests.post("https://api.digitalocean.com/v2/droplets",headers={"Authorization" : "Bearer %s"}%(Token),data=_body)
         elif action.get("Remove"):
             requests.delete("https://api.digitalocean.com/v2/droplets/%s"%ServerId,headers={"Authorization" : "Bearer %s"}%(Token))
