@@ -1,8 +1,4 @@
 import boto
-from boto import ec2
-from boto.ec2 import image
-from boto.ec2 import regions
-from boto.ec2 import EC2Connection
 import requests
 
 class Numergy(object):
@@ -33,7 +29,7 @@ class Numergy(object):
         _token = (data['access']['token']['id'])
         global _token
     @staticmethod
-    def ImageId(**Image,**OsVer,**OsRole):## Get ImageId
+    def ImageId(TenantId,**Image,**OsVer,**OsRole):## Get ImageId
         request = requests.get("https://api2.numergy.com/%s/%s/images" % (_version,TenantId), headers={"X-Auth-Token" : "%s" %_token})
         data = request.json()
         if Image.get("Windows") and OsVer.get("2008"):
@@ -70,7 +66,7 @@ class Numergy(object):
                 ImageId = i['id']
                 global ImageId
     @staticmethod
-    def FlavorId(Flavor):## Get FlavorId
+    def FlavorId(Flavor,TenantId):## Get FlavorId
         request = requests.get("https://api2.numergy.com/%s/%s/images" %(_version,TenantId), headers={"X-Auth-Token" : "%s" %_token})
         data = request.json()
         for i in (data["flavors"]):
@@ -78,7 +74,7 @@ class Numergy(object):
                 FlavorId = i['id']
                 global FlavorId
     @staticmethod
-    def Server(ServerName,ServerId,ImageId,FlavorId,**action):## Server Creation
+    def Server(TenantId,ServerName,ServerId,ImageId,FlavorId,**action):## Server Creation
         if action.get("Insert"):
             _body = '{"server": {"flavorRef": %s,"imageRef": %s,"name": %s,"password_delivery": API}}'%(FlavorId,ImageId,ServerName)
             requests.post("https://api2.numergy.com/%s/%s/servers" % (_version,TenantId), headers={"X-Auth-Token" : "%s" % _token}, data=_body)
@@ -132,7 +128,7 @@ class Cloudwatt(object):
                 FlavorId = i['id']
                 global FlavorId
     @staticmethod
-    def Server(ServerId,ServerName,Number,ServPass,ImageId,FlavorId,**action):
+    def Server(ServerId,ServerName,Number,ServPass,ImageId,FlavorId,TenantId,token,**action):
         if action.get("insert"):
             ## Get Security Group
             _body = '{"security_group":{"name":"Security","description":"SecGroup"}}'
@@ -144,8 +140,9 @@ class Cloudwatt(object):
             request = requests.post("https://network.fr1.cloudwatt.com/v2/security-groups",headers={"X-Auth-Token" : "%s"%(token)},data=_body)
             data = request.json
             NetId = data['network']['id']
-            _body = '{"subnet":{"network_id":"$s","ip_version":4,"cidr":"192.168.0.0/24"}}'%(NetId)
+            _body = '{"subnet":{"network_id":"%s","ip_version":4,"cidr":"192.168.0.0/24"}}'%(NetId)
             requests.post("https://network.fr1.cloudwatt.com/v2/security-groups",headers={"X-Auth-Token" : "%s"%(token)},data=_body)
+            global NetId,SecGroup
             ## SSHKey & instance creation
             if ImageId not in "Win":
                 _body = '{"keypair":{"name":"cle"}}'
@@ -188,6 +185,7 @@ class Cloudwatt(object):
                 IP = i['addresses']['private']['addr']
                 ImageId = i['image']['id']
                 ServerName = i['name']
+                global IP
             _body = '{"rebuild": {"imageRef": "%s","name": "%s","adminPass": "%s","accessIPv4": "%s"}}'%(ImageId,ServerName,ServPass,IP)
             requests.post("https://compute.fr1.cloudwatt.com/v2/%s/servers/%s/rebuild"%(TenantId,ServerId),headers={"X-Auth-Token" : "%s"%(token)},data=_body)
         else:
@@ -219,7 +217,7 @@ class Rackspace(object):
         Token = data['access']['token']['id']
         global Token
     @staticmethod
-    def GetImageId(TenantId,Image):## Get Image Id
+    def GetImageId(TenantId,Image,Token):## Get Image Id
         request = requests.get("https://lon.servers.api.rackspacecloud.com/v2/%s/images"%(TenantId),headers={"Authorization" : "Bearer %s"%(Token)})
         data = request.json()
         for i in (data['images']):
@@ -227,7 +225,7 @@ class Rackspace(object):
                 ImageId = i['id']
                 global ImageId
     @staticmethod
-    def GetFlavorId(TenantId,Flavor):## Get FlavorId
+    def GetFlavorId(TenantId,Flavor,Token):## Get FlavorId
         request = requests.get("https://lon.servers.api.rackspacecloud.com/v2/%s/flavors"%(TenantId),headers={"Authorization" : "Bearer %s"%(Token)})
         data = request.json()
         for i in (data['flavors']):
@@ -235,7 +233,7 @@ class Rackspace(object):
                 FlavorId = i['id']
                 global FlavorId
     @staticmethod
-    def Server(ServerName,ServerId,ImageId,FlavorId,**action):
+    def Server(ServerName,ServerId,ImageId,FlavorId,Token,TenantId,**action):
         if action.get("insert"):## Server Creation
             _body = '{"server": {"name": "%s","imageRef": "%s","flavorRef": "%s"}}'%(ServerName,ImageId,FlavorId)
             requests.post("https://lon.servers.api.rackspacecloud.com/v2/%s/servers"%(TenantId),headers={"Authorization" : "Bearer %s"%(Token)},data=_body)
@@ -266,10 +264,10 @@ class DigitalOcean(object):
         param: bits The key length in bits
         Return private key and public key
         '''
-        from Crypto.PublicKey import RSA 
-        new_key = RSA.generate(bits, e=65537) 
-        public_key = new_key.publickey().exportKey("PEM") 
-        private_key = new_key.exportKey("PEM") 
+        from Crypto.PublicKey import RSA
+        new_key = RSA.generate(bits, e=65537)
+        public_key = new_key.publickey().exportKey("PEM")
+        private_key = new_key.exportKey("PEM")
         return private_key, public_key
         _body = '{"name":"SSH key","public_key":"%s"}'%public_key
         requests.post("https://api.digitalocean.com/v2/account/keys",headers={"Authorization" : "Bearer %s"%(Token)},data=_body)
@@ -277,7 +275,7 @@ class DigitalOcean(object):
         KeyId = data['ssh_keys']['id']
         global KeyId
     @staticmethod
-    def GetImageId(**Image,**OsVer):## Get ImageId
+    def GetImageId(Token,**Image,**OsVer):## Get ImageId
         global Imgkey
         request = requests.get("https://api.digitalocean.com/v2/images",headers={"Authorization" : "Bearer %s"%(Token)})
         data = request.json()
@@ -302,7 +300,7 @@ class DigitalOcean(object):
                 ImageId = i['id']
                 global ImageId
     @staticmethod
-    def GetSizeId(Size):## Get SizeId
+    def GetSizeId(Size,Token):## Get SizeId
         request = requests.get("https://api.digitalocean.com/v2/sizes",headers={"Authorization" : "Bearer %s"}%(Token))
         data = request.json()
         for i in data['sizes']:
@@ -310,7 +308,7 @@ class DigitalOcean(object):
                 SizeId = i['slug']
                 global SizeId
     @staticmethod
-    def GetRegionId(Region):## Get Region
+    def GetRegionId(Region,Token):## Get Region
         request = requests.get("https://api.digitalocean.com/v2/regions",headers={"Authorization" : "Bearer %s"}%(Token))
         data = request.json()
         for i in data['regions']:
@@ -318,7 +316,7 @@ class DigitalOcean(object):
                 RegionId = i['slug']
                 global RegionId
     @staticmethod
-    def Server(ServerName,ServerId,ImageId,,SizeId,RegionId,**action):## Server Creation
+    def Server(ServerName,ServerId,ImageId,Image,Token,KeyId,SizeId,RegionId,**action):## Server Creation
         if action.get("insert"):
             _body = '{"name": "%s","region": "%s","size": "%s","image": "%s","ssh_keys": "%s","backups": false,"ipv6": true,"user_data": null,"private_networking": null}'%(ServerName,RegionId,SizeId,ImageId,KeyId)
             requests.post("https://api.digitalocean.com/v2/droplets",headers={"Authorization" : "Bearer %s"}%(Token),data=_body)
@@ -349,7 +347,7 @@ class Google(object):
         self.action = action
     #global Image,Project,Token,Region,Size,ServerId,action
     @staticmethod
-    def GetImageId(Image):## Get ImageId
+    def GetImageId(Image,Project,Token):## Get ImageId
         request = requests.get("https://www.googleapis.com/compute/v1/projects/%s/%s-cloud/global/images"%(Project,Image),header={"Authorization" : "Bearer %s"}%(Token))
         data = request.json()
         for i in data['items']:
@@ -357,7 +355,7 @@ class Google(object):
                 ImageId = data['selfLink'][-1]
                 global ImageId
     @staticmethod
-    def GetRegionId(Region): ## Get RegionId
+    def GetRegionId(Region,Project,Token): ## Get RegionId
         request = requests.get("https://www.googleapis.com/compute/v1/projects/%s/regions"%(Project),header={"Authorization" : "Bearer %s"}%(Token))
         data = request.json()
         for i in data['items']:
@@ -365,7 +363,7 @@ class Google(object):
                 RegionId = data['selfLink']
                 global RegionId
     @staticmethod
-    def GetSizeId(Size):## Get SizeId
+    def GetSizeId(Size,Project,RegionId,Token):## Get SizeId
         request = requests.get("https://www.googleapis.com/compute/v1/projects/%s/zones/%s/machineType"%(Project,RegionId),header={"Authorization" : "Bearer %s"}%(Token))
         data = request.json()
         for i in data['items']:
@@ -373,7 +371,7 @@ class Google(object):
                 SizeId = data['selfLink']
                 global SizeId
     @staticmethod
-    def Server(ServerName,SizeId,ImageId,**action):## Server Creation
+    def Server(ServerName,ServerId,RegionId,SizeId,ImageId,Token,Project,**action):## Server Creation
         if action.get("Insert"):
             _body = '{"name": "%s","machineType": "%s","networkInterfaces": [{"accessConfigs": [{"type": "ONE_TO_ONE_NAT","name": "External NAT"}],"network": "global/networks/default"}],"disks": [{"autoDelete": "true","boot": "true","type": "PERSISTENT","initializeParams": {"sourceImage": "%s"}}]}'%(ServerName,SizeId,ImageId)
             requests.post("https://www.googleapis.com/compute/v1/projects/%s/zones/%s/instances"%(Project,RegionId),header={"Authorization" : "Bearer %s"}%(Token),data=_body)
@@ -398,53 +396,52 @@ class Amazon(object):
         self.action = action
     #global AccessKey,SecretKey,Region,Image,OsVer,OsRole,Number,ServerId,action
     @staticmethod
-    def GetRegionId(Region):## Get Regions
-        AWS_region_list = regions(aws_access_key_id=AccessKey, aws_secret_access_key=SecretKey)
-        for i in AWS_region_list:
-            if Region in i.name:
-                RegionId = i.name
-        AWS_connection = ec2.connect_to_region(RegionId)
-        global AWS_connection
+    def EC2Connect(AccessKey,SecretKey):
+        connect = boto.connect_ec2(aws_access_key_id=AccessKey,aws_secret_access_key=SecretKey)
+        global connect
     @staticmethod
-    def GetImageId(**Image,**OsVer,**OsRole):## Get ImageId
+    def GetImageId(Image,OsVer,OsRole):## Get ImageId
         global Imgkey
-        AWS_Image = AWS_connection.get_all_images(filter={'virtualization_type':'hvm','state':'available'})
+        AWS_Image = connect.get_all_images(filter={
+            'virtualization_type':'hvm',
+            'state':'available'
+        })
         if Image.get("Windows") and OsVer.get("2003"):
-            if OsRole.get("SQL"): Imgkey = "amazon/Windows_Server-2003-R2_SP2-English-64Bit-SQL_2005_SP4_Express-2016.03"
-            else: Imgkey = "amazon/Windows_Server-2003-R2_SP2-English-64Bit-Base-2016.03"
+            if OsRole.get("SQL"): Imgkey = "Windows_Server-2003-R2_SP2-English-64Bit-SQL_2005_SP4_Express-2016.03"
+            else: Imgkey = "Windows_Server-2003-R2_SP2-English-64Bit-Base-2016.03"
         if Image.get("Windows") and OsVer.get("2008"):
-            if OsRole.get("SQL"):Imgkey = "amazon/Windows_Server-2008-R2_SP1-English-64Bit-SQL_2012_SP2_Express-2016.03"
-            elif OsRole.get("Sharepoint"):Imgkey = "amazon/Windows_Server-2008-R2_SP1-English-64Bit-SharePoint_2010_SP2_Foundation-2016.03"
-            else:Imgkey = "amazon/Windows_Server-2008-R2_SP1-English-64Bit-Base-2016.03"
+            if OsRole.get("SQL"):Imgkey = "Windows_Server-2008-R2_SP1-English-64Bit-SQL_2012_SP2_Express-2016.03"
+            elif OsRole.get("Sharepoint"):Imgkey = "Windows_Server-2008-R2_SP1-English-64Bit-SharePoint_2010_SP2_Foundation-2016.03"
+            else:Imgkey = "Windows_Server-2008-R2_SP1-English-64Bit-Base-2016.03"
         if Image.get("Windows") and OsVer.get("2012"):
-            if OsRole.get("SQL"): Imgkey = "amazon/Windows_Server-2012-R2_RTM-English-64Bit-SQL_2014_SP1_Express-2016.03"
-            else:Imgkey = "amazon/Windows_Server-2012-R2_RTM-English-64Bit-Base-2016.03"
+            if OsRole.get("SQL"): Imgkey = "Windows_Server-2012-R2_RTM-English-64Bit-SQL_2014_SP1_Express-2016.03"
+            else:Imgkey = "Windows_Server-2012-R2_RTM-English-64Bit-Base-2016.03"
         if Image.get("CentOS") and OsVer.get("7"):
-            if OsRole.get("SQL"):Imgkey = "aws-marketplace/MariaDB-10.1.13-CentOS-7-x86_64"
-            elif OsRole.get("docker"): Imgkey ="902703094694/Centos71_docker18"
-            else : Imgkey = "410186602215/CentOS Atomic Host 7 x86_64 HVM EBS 1603_01"
+            if OsRole.get("SQL"):Imgkey = "MariaDB-10.1.13-CentOS-7-x86_64"
+            elif OsRole.get("docker"): Imgkey ="Centos71_docker18"
+            else : Imgkey = "CentOS Atomic Host 7 x86_64 HVM EBS 1603_01"
         if Image.get("CentOS") and OsVer.get("6"):
-            Imgkey = "041819229125/RightImage_CentOS_6.6_x64"
+            Imgkey = "RightImage_CentOS_6.6_x64"
         if Image.get("Debian") and OsVer.get("8"):
-            if OsRole.get("SQL"): Imgkey = "aws-marketplace/MariaDB-10.1.13-Debian-8-Jessie-x86_64"
-            else: Imgkey = "379101102735/debian-jessie-amd64-hvm-2016-04"
-        if Image.get("Gentoo"): Imgkey = "341857463381/gentoo-20160320"
+            if OsRole.get("SQL"): Imgkey = "MariaDB-10.1.13-Debian-8-Jessie-x86_64"
+            else: Imgkey = "debian-jessie-amd64-hvm-2016-04"
+        if Image.get("Gentoo"): Imgkey = "gentoo-20160320"
         if Image.get("Ubuntu"):
-            if OsRole.get("docker") : Imgkey = "581944577692/3E-ubuntu-14.04-docker"
-            elif OsRole.get("apache") : Imgkey = "aws-marketplace/usp-1.7.16-apache2.4-mp-server-ubuntu-14.04-amd64-paravirtual-2016"
-            elif OsRole.get("SQL") : Imgkey = "aws-marketplace/MariaDB-10.0.24-Ubuntu-14.04-x86_64-0fb33ae5"
-            else: Imgkey = "ubuntu-eu-central-1/images/ubuntu-trusty-14.04-amd64-server-201604"
+            if OsRole.get("docker") : Imgkey = "3E-ubuntu-14.04-docker"
+            elif OsRole.get("apache") : Imgkey = "usp-1.7.16-apache2.4-mp-server-ubuntu-14.04-amd64-paravirtual-2016"
+            elif OsRole.get("SQL") : Imgkey = "MariaDB-10.0.24-Ubuntu-14.04-x86_64-0fb33ae5"
+            else: Imgkey = "images/ubuntu-trusty-14.04-amd64-server-201604"
         for i in AWS_Image:
-            if Imgkey in i.image_location:
+            if Imgkey in i.name:
                 ImageId = i.id
                 global ImageId
     @staticmethod
-    def Server(Number,ServerId,**action):## Instances creation
+    def Server(Number,ServerId,ImageId,action):## Instances creation
         if action.get("insert"):
-            EC2Connection.run_instances(ImageId,min_count=1,max_count=Number,instance_type='m1.small')
+            connect.run_instances(ImageId,min_count=1,max_count=Number,instance_type='m1.small')
         elif action.get("Remove"):
-            EC2Connection.terminate_instances(instance_ids=ServerId)
+            connect.terminate_instances(instance_ids=ServerId)
         elif action.get("Reboot"):
-            EC2Connection.stop_instances(instance_ids=ServerId)
+            connect.stop_instances(instance_ids=ServerId)
         else:
             return "error"
