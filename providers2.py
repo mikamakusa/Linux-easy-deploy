@@ -20,11 +20,11 @@ class Provider(object):
         request = requests.get("https://api2.numergy.com/%s/%s/images" % (_version, TenantId),
                                headers={"X-Auth-Token": "%s" % _token})
         data = request.json()
-        
+
         if "Windows" in Image:
             if App is None:
                 ImgKey = ''.join((list(Image.split()[0])[:3])) + Image.split()[1] + " " + Image.split()[2] + " " + \
-                      Image.split()[3] + " " + Image.split()[4]
+                         Image.split()[3] + " " + Image.split()[4]
             else:
                 ImgKey = ''.join((list(Image.split()[0])[:3])) + Image.split()[1] + " " + Image.split()[2] + " " + App
         else:
@@ -344,28 +344,9 @@ class Provider(object):
             return "error"
 
     @classmethod
-    def Amazon(cls, AccessKey, SecretKey, Image, Language, App, Number, ServerId, action):
+    def Amazon(cls, AccessKey, SecretKey, ImageId, Number, ServerId, action):
 
         connect = boto.connect_ec2(aws_access_key_id=AccessKey, aws_secret_access_key=SecretKey)
-
-        global Imgkey
-        if "Windows" in Image:
-            Imgkey = Image.split()[0] + "_" + Image.split()[1] + "-" + Image.split()[2] + "-" + Image.split()[3] + "_" + \
-                Image.split()[4] + "_" + Language+"*"
-        else:
-            if App is not None:
-                Imgkey = App+"*"+Image.split()[0]+"-"+Image.split()[1]+"-"+Image.split()[2]
-            else:
-                Imgkey = Image.split()[0]+"-"+Image.split()[1]+"-"+Image.split()[2]
-        AWS_Image = connect.get_all_images(filter={
-            'virtualization_type': 'hvm',
-            'state': 'available',
-            'name': '%s'
-        })[0] % Imgkey
-        for i in AWS_Image:
-            if Imgkey in i.name:
-                ImageId = i.id
-                global ImageId
 
         if action.get("insert"):
             connect.run_instances(ImageId, min_count=1, max_count=Number, instance_type='m1.small')
@@ -375,5 +356,3 @@ class Provider(object):
             connect.stop_instances(instance_ids=ServerId)
         else:
             return "error"
-
-
