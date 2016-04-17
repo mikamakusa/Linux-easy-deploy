@@ -4,7 +4,7 @@ import requests
 
 class Provider(object):
     @classmethod
-    def Numergy(cls, AccessKey, SecretKey, TenantId, Image, OsVer, OsRole, Flavor, ServerName, ServerId, action):
+    def Numergy(cls, AccessKey, SecretKey, TenantId, Image, App, Flavor, ServerName, ServerId, action):
         request = requests.get("https://api2.numergy.com/")
         data = request.json()
         for i in (data['versions']['version']):
@@ -20,57 +20,19 @@ class Provider(object):
         request = requests.get("https://api2.numergy.com/%s/%s/images" % (_version, TenantId),
                                headers={"X-Auth-Token": "%s" % _token})
         data = request.json()
-        if Image.get("Windows") and OsVer.get("2008"):
-            if OsRole.get("IIS"):
-                ImgKey = "Win2008 R2 IIS"
-            elif OsRole.get("MSSQL"):
-                ImgKey = "Win2008 R2 MSSQL ENT"
+        
+        if "Windows" in Image:
+            if App is None:
+                ImgKey = ''.join((list(Image.split()[0])[:3])) + Image.split()[1] + " " + Image.split()[2] + " " + \
+                      Image.split()[3] + " " + Image.split()[4]
             else:
-                ImgKey = "Win2008 R2 STD 64"
-        elif Image.get("Windows") and OsVer.get("2012"):
-            if OsRole.get("SQL"):
-                ImgKey = "Win2012 R2 STD SQL 2014 STD"
-            else:
-                ImgKey = "Win2012 R2 STD"
-        elif Image.get("CentOS") and OsVer.get("6"):
-            if OsRole.get("mysql"):
-                ImgKey = "Cen6 mysql"
-            else:
-                ImgKey = "Cen6"
-        elif Image.get("RedHat") and OsVer.get("5"):
-            if OsRole.get("mysql"):
-                ImgKey = "Red5 mysql"
-            elif OsRole.get("lamp"):
-                ImgKey = "Red5 LAMP"
-            else:
-                ImgKey = "Red5"
-        elif Image.get("RedHat") and OsVer.get("6"):
-            if OsRole.get("mysql"):
-                ImgKey = "Red6_mysql"
-            elif OsRole.get("lamp"):
-                ImgKey = "Red6 LAMP"
-            else:
-                ImgKey = "Red6_64"
-        elif Image.get("Ubuntu") and OsVer.get("12"):
-            if OsRole.get("mysql"):
-                ImgKey = "ubu12 mysql"
-            elif OsRole.get("lamp"):
-                ImgKey = "ubu12 LAMP"
-            else:
-                ImgKey = "ubu12"
-        elif Image.get("Ubuntu") and OsVer.get("14"):
-            if OsRole.get("mysql"):
-                ImgKey = "ubu14 mysql"
-            elif OsRole.get("lamp"):
-                ImgKey = "ubu14 LAMP"
-            else:
-                ImgKey = "ubu14"
-        elif Image.get("Debian") and OsVer.get("7"):
-            ImgKey = "Deb7"
-        elif Image.get("Debian") and OsVer.get("8"):
-            ImgKey = "Deb8"
+                ImgKey = ''.join((list(Image.split()[0])[:3])) + Image.split()[1] + " " + Image.split()[2] + " " + App
         else:
-            return "error"
+            if App is not None:
+                ImgKey = ''.join((list(Image.split()[0])[:3])) + Image.split()[-1] + " " + App
+            else:
+                ImgKey = ''.join((list(Image.split()[0])[:3])) + Image.split()[-1]
+            global ImgKey
         for i in (data['images']):
             if ImgKey in i['name']:
                 ImageId = i['id']
@@ -258,7 +220,7 @@ class Provider(object):
             return ("error")
 
     @classmethod
-    def DigitalOcean(cls, Token, Image, OsVer, Region, Size, ServerName, ServerId, action):
+    def DigitalOcean(cls, Token, Image, Region, Size, ServerName, ServerId, action):
         def generate_RSA(bits=2048):
             '''
             Generate an RSA keypair with an exponent of 65537 in PEM format
@@ -284,35 +246,13 @@ class Provider(object):
         request = requests.get("https://api.digitalocean.com/v2/images",
                                headers={"Authorization": "Bearer %s" % Token})
         data = request.json()
-        if Image.get("Ubuntu"):
-            if OsVer.get("15.10"):
-                Imgkey = "ubuntu-15-10-x64"
-            elif OsVer.get("14.04"):
-                Imgkey = "ubuntu-14-04-x64"
-            else:
-                Imgkey = "ubuntu-12-04-x64"
-        if Image.get("FreeBSD"):
-            if OsVer.get("10.1"):
-                Imgkey = "freebsd-10-1-x64"
-            else:
-                Imgkey = "freebsd-10-2-x64"
-        if Image.get("Fedora"):
-            if OsVer.get("23"):
-                Imgkey = "fedora-23-x64"
-            else:
-                Imgkey = "fedora-22-x64"
-        if Image.get("Debian"):
-            Imgkey = "debian-8-x64"
-        if Image.get("CoreOs"):
+        if Image.split()[2] is not None:
+            Imgkey = Image.split()[0] + "-" + Image.split()[1] + "-" + Image.split()[2]
+        elif Image.split()[2] is None:
+            Imgkey = Image.split()[0] + "-" + Image.split()[1] + "-"
+        else:
             Imgkey = "coreos-beta"
-        if Image.get("CentOS"):
-            if OsVer.get("5"):
-                Imgkey = "centos-5-8-x64"
-            elif OsVer.get("6"):
-                Imgkey = "centos-6-5-x64"
-            else:
-                Imgkey = "centos-7"
-            global Imgkey
+
         for i in data['images']:
             if Imgkey in i['slug']:
                 ImageId = i['id']
@@ -404,54 +344,19 @@ class Provider(object):
             return "error"
 
     @classmethod
-    def Amazon(cls, AccessKey, SecretKey, Region, Image, OsVer, OsRole, Number, ServerId, action):
-        
+    def Amazon(cls, AccessKey, SecretKey, Image, Language, App, Number, ServerId, action):
+
         connect = boto.connect_ec2(aws_access_key_id=AccessKey, aws_secret_access_key=SecretKey)
-        global connect
 
         global Imgkey
-        if Image.get("Windows") and OsVer.get("2003"):
-            if OsRole.get("SQL"):
-                Imgkey = "Windows_Server-2003-R2_SP2-English-64Bit-SQL_2005_SP4_Express-2016.03"
+        if "Windows" in Image:
+            Imgkey = Image.split()[0] + "_" + Image.split()[1] + "-" + Image.split()[2] + "-" + Image.split()[3] + "_" + \
+                Image.split()[4] + "_" + Language+"*"
+        else:
+            if App is not None:
+                Imgkey = App+"*"+Image.split()[0]+"-"+Image.split()[1]+"-"+Image.split()[2]
             else:
-                Imgkey = "Windows_Server-2003-R2_SP2-English-64Bit-Base-2016.03"
-        if Image.get("Windows") and OsVer.get("2008"):
-            if OsRole.get("SQL"):
-                Imgkey = "Windows_Server-2008-R2_SP1-English-64Bit-SQL_2012_SP2_Express-2016.03"
-            elif OsRole.get("Sharepoint"):
-                Imgkey = "Windows_Server-2008-R2_SP1-English-64Bit-SharePoint_2010_SP2_Foundation-2016.03"
-            else:
-                Imgkey = "Windows_Server-2008-R2_SP1-English-64Bit-Base-2016.03"
-        if Image.get("Windows") and OsVer.get("2012"):
-            if OsRole.get("SQL"):
-                Imgkey = "Windows_Server-2012-R2_RTM-English-64Bit-SQL_2014_SP1_Express-2016.03"
-            else:
-                Imgkey = "Windows_Server-2012-R2_RTM-English-64Bit-Base-2016.03"
-        if Image.get("CentOS") and OsVer.get("7"):
-            if OsRole.get("SQL"):
-                Imgkey = "MariaDB-10.1.13-CentOS-7-x86_64"
-            elif OsRole.get("docker"):
-                Imgkey = "Centos71_docker18"
-            else:
-                Imgkey = "CentOS Atomic Host 7 x86_64 HVM EBS 1603_01"
-        if Image.get("CentOS") and OsVer.get("6"):
-            Imgkey = "RightImage_CentOS_6.6_x64"
-        if Image.get("Debian") and OsVer.get("8"):
-            if OsRole.get("SQL"):
-                Imgkey = "MariaDB-10.1.13-Debian-8-Jessie-x86_64"
-            else:
-                Imgkey = "debian-jessie-amd64-hvm-2016-04"
-        if Image.get("Gentoo"): 
-            Imgkey = "gentoo-20160320"
-        if Image.get("Ubuntu"):
-            if OsRole.get("docker"):
-                Imgkey = "3E-ubuntu-14.04-docker"
-            elif OsRole.get("apache"):
-                Imgkey = "usp-1.7.16-apache2.4-mp-server-ubuntu-14.04-amd64-paravirtual-2016"
-            elif OsRole.get("SQL"):
-                Imgkey = "MariaDB-10.0.24-Ubuntu-14.04-x86_64-0fb33ae5"
-            else:
-                Imgkey = "images/ubuntu-trusty-14.04-amd64-server-201604"
+                Imgkey = Image.split()[0]+"-"+Image.split()[1]+"-"+Image.split()[2]
         AWS_Image = connect.get_all_images(filter={
             'virtualization_type': 'hvm',
             'state': 'available',
@@ -470,3 +375,5 @@ class Provider(object):
             connect.stop_instances(instance_ids=ServerId)
         else:
             return "error"
+
+
