@@ -401,7 +401,7 @@ class server(provider):
                 token.get_token().terminate_instances(instance_ids=self.serverid)
             elif action.get_aname() == 'Reboot':
                 token.get_token().stop_instances(instance_ids=self.serverid)
-        if provider.get_name() == 'Cloudwatt':
+        elif provider.get_name() == 'Cloudwatt':
             if action.get_aname() == 'Insert':
                 _body = '{"security_group":{"name":"Security","description":"SecGroup"}}'
                 request = requests.post("https://network.fr1.cloudwatt.com/v2/security-groups",
@@ -541,7 +541,7 @@ class server(provider):
                     flavor.flavorid(), image.getimageid(), self.servername)
                 requests.post("https://api2.numergy.com/%s/%s/servers/%s" % (token.get_version(), token.tenantid, self.serverid),
                               headers={"X-Auth-Token": "%s" % token.get_token()}, data=_body)
-        elif provider.get_name() == '':
+        elif provider.get_name() == 'OVH':
             if action.get_aname() == 'Insert':
                 s1 = hashlib.sha1()
                 s1.update("+".join([token.applicationkey, token.get_token(), "GET", "https://eu.api.ovh.com/1.0/cloud/project/%s/instance"%token.get_service(),token.get_time()]))
