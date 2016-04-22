@@ -15,13 +15,13 @@ class Provider(object):
             for i in (data['versions']['version']):
                 if "CURRENT" in i['status']:
                     _version = i['id']
-            # global _version
+
             body = '{"auth": {"apiAccessKeyCredentials": {"accessKey": "%s","secretKey": "%s" },"tenantId": "%s"}}' % (
                 AccessKey, SecretKey, TenantId)
             request = requests.post("https://api2.numergy.com/%s/tokens" % _version, data=body)
             data = request.json()
             _token = (data['access']['token']['id'])
-            # global _token
+
             request = requests.get("https://api2.numergy.com/%s/%s/images" % (_version, TenantId),
                                    headers={"X-Auth-Token": "%s" % _token})
             data = request.json()
@@ -38,18 +38,18 @@ class Provider(object):
                     ImgKey = ''.join((list(Image.split()[0])[:3])) + Image.split()[-1] + " " + App
                 else:
                     ImgKey = ''.join((list(Image.split()[0])[:3])) + Image.split()[-1]
-                    # global ImgKey
+
             for i in (data['images']):
                 if ImgKey in i['name']:
                     ImageId = i['id']
-                    # global ImageId
+
             request = requests.get("https://api2.numergy.com/%s/%s/images" % (_version, TenantId),
                                    headers={"X-Auth-Token": "%s" % _token})
             data = request.json()
             for i in (data["flavors"]):
                 if Flavor in i["name"]:
                     FlavorId = i['id']
-                    # global FlavorId
+
             if action.get("Insert"):
                 _body = '{"server": {"flavorRef": %s,"imageRef": %s,"name": %s,"password_delivery": API}}' % (
                     FlavorId, ImageId, ServerName)
@@ -79,7 +79,6 @@ class Provider(object):
             request = requests.post("https://identity.fr1.cloudwatt.com/v2/tokens", data=_body)
             data = request.json()
             token = data['access']['token']['id']
-            # global token
 
             request = requests.get("https://compute.fr1.cloudwatt.com/v2/%s/images" % TenantId,
                                    headers={"X-Auth-Token": "%s" % (token)})
@@ -87,7 +86,6 @@ class Provider(object):
             for i in (data['images']):
                 if Image in i['name']:
                     ImageId = i['id']
-                    # global ImageId
 
             request = requests.get("https://compute.fr1.cloudwatt.com/v2/%s/flavors" % TenantId,
                                    headers={"X-Auth-Token": "%s" % token})
@@ -95,7 +93,6 @@ class Provider(object):
             for i in (data['flavors']):
                 if Flavor in i['name']:
                     FlavorId = i['id']
-                    # global FlavorId
 
             if action.get("insert"):
                 ## Get Security Group
@@ -113,7 +110,7 @@ class Provider(object):
                 _body = '{"subnet":{"network_id":"%s","ip_version":4,"cidr":"192.168.0.0/24"}}' % (NetId)
                 requests.post("https://network.fr1.cloudwatt.com/v2/security-groups",
                               headers={"X-Auth-Token": "%s" % token}, data=_body)
-                # global NetId, SecGroup
+
                 ## SSHKey & instance creation
                 if ImageId not in "Win":
                     _body = '{"keypair":{"name":"cle"}}'
@@ -170,7 +167,7 @@ class Provider(object):
                     IP = i['addresses']['private']['addr']
                     ImageId = i['image']['id']
                     ServerName = i['name']
-                    # global IP
+
                 _body = '{"rebuild": {"imageRef": "%s","name": "%s","adminPass": "%s","accessIPv4": "%s"}}' % (
                     ImageId, ServerName, ServPass, IP)
                 requests.post("https://compute.fr1.cloudwatt.com/v2/%s/servers/%s/rebuild" % (TenantId, ServerId),
@@ -186,13 +183,11 @@ class Provider(object):
             for i in (data['version']['version']):
                 if "2" in i['id']:
                     version = i['id']
-                    # global version
 
             _body = '{"auth":{"RAX-KSKEY:apiKeyCredentials":{"username":"%s","apiKey":"%s"}}}' % (username, apikey)
             request = requests.post("https://identity.api.rackspacecloud.com/%s/tokens" % version, data=_body)
             data = request.json()
             Token = data['access']['token']['id']
-            # global Token
 
             request = requests.get("https://lon.servers.api.rackspacecloud.com/v2/%s/images" % TenantId,
                                    headers={"Authorization": "Bearer %s" % Token})
@@ -200,7 +195,6 @@ class Provider(object):
             for i in (data['images']):
                 if Image in i['name']:
                     ImageId = i['id']
-                    # global ImageId
 
             request = requests.get("https://lon.servers.api.rackspacecloud.com/v2/%s/flavors" % TenantId,
                                    headers={"Authorization": "Bearer %s" % Token})
@@ -208,7 +202,6 @@ class Provider(object):
             for i in (data['flavors']):
                 if Flavor in i['name']:
                     FlavorId = i['id']
-                    # global FlavorId
 
             if action.get("insert"):  ## Server Creation
                 _body = '{"server": {"name": "%s","imageRef": "%s","flavorRef": "%s"}}' % (
@@ -270,7 +263,7 @@ class Provider(object):
                 for i in data['images']:
                     if Imgkey in i['slug']:
                         ImageId = i['id']
-                        # global ImageId
+
             elif Application is not None:
                 request = requests.get("https://api.digitalocean.com/v2/images",
                                        headers={"Authorization": "Bearer %s" % Token})
@@ -278,14 +271,13 @@ class Provider(object):
                 for i in data['application']:
                     if Application in i:
                         ImageId = i['id']
-                        # global ImageId
+
             request = requests.get("https://api.digitalocean.com/v2/sizes",
                                    headers={"Authorization": "Bearer %s"} % Token)
             data = request.json()
             for i in data['sizes']:
                 if Size in i['slug'] and "True" in i['available']:
                     SizeId = i['slug']
-                    # global SizeId
 
             request = requests.get("https://api.digitalocean.com/v2/regions",
                                    headers={"Authorization": "Bearer %s"} % Token)
@@ -293,7 +285,6 @@ class Provider(object):
             for i in data['regions']:
                 if Region in i['slug'] and "True" in i['available']:
                     RegionId = i['slug']
-                    # global RegionId
 
             if action.get("insert"):
                 _body = '{"name": "%s","region": "%s","size": "%s","image": "%s","ssh_keys": "%s","backups": false,"ipv6": true,"user_data": null,"private_networking": null}' % (
@@ -332,7 +323,6 @@ class Provider(object):
             for i in data['items']:
                 if Image in data['selfLink']:
                     ImageId = data['selfLink'][-1]
-                    # global ImageId
 
             request = requests.get("https://www.googleapis.com/compute/v1/projects/%s/regions" % (Project),
                                    header={"Authorization": "Bearer %s"} % Token)
@@ -340,7 +330,6 @@ class Provider(object):
             for i in data['items']:
                 if Region in data['items']:
                     RegionId = data['selfLink']
-                    # global RegionId
 
             request = requests.get(
                 "https://www.googleapis.com/compute/v1/projects/%s/zones/%s/machineType" % (Project, RegionId),
@@ -349,7 +338,6 @@ class Provider(object):
             for i in data['items']:
                 if Size in data['items']:
                     SizeId = data['selfLink']
-                    # global SizeId
 
             if action.get("Insert"):
                 _body = '{"name": "%s","machineType": "%s","networkInterfaces": [{"accessConfigs": [{"type": "ONE_TO_ONE_NAT","name": "External NAT"}],"network": "global/networks/default"}],"disks": [{"autoDelete": "true","boot": "true","type": "PERSISTENT","initializeParams": {"sourceImage": "%s"}}]}' % (
@@ -395,14 +383,14 @@ class Provider(object):
             d = requests.get("https://eu.api.ovh.com/1.0/auth/time")
             for i in d:
                 time = i
-            # Get ServiceId
+
             s1 = hashlib.sha1()
             s1.update("+".join([ApplicationKey, ConsumerKey, "GET", "https://eu.api.ovh.com/1.0/cloud/project", time]))
             sig = "$1$" + s1.hexdigest()
             queryHeaders = {"X-Ovh-Application": ApplicationKey, "X-Ovh-Timestamp": time, "X-Ovh-Consumer": ConsumerKey,
                             "X-Ovh-Signature": sig, "Content-type": "application/json"}
             service = requests.post("https://eu.api.ovh.com/1.0/cloud/project", headers=queryHeaders)
-            # Get ImageId
+
             s1 = hashlib.sha1()
             s1.update("+".join(
                 [ApplicationKey, ConsumerKey, "GET", "https://eu.api.ovh.com/1.0/cloud/project/%s/image" % service,
@@ -414,7 +402,7 @@ class Provider(object):
             for i in image:
                 if Image in i['name'] and EndPoint in i['Region']:
                     ImageId = i['id']
-                    # global ImageId
+
             # Get FlavorId
             s1 = hashlib.sha1()
             s1.update("+".join(
@@ -427,7 +415,7 @@ class Provider(object):
             for i in flavor:
                 if Flavor in i['name'] and EndPoint in i['region']:
                     FlavorId = i['id']
-                    # global FlavorId
+
             # Instance actions
             if action.get("Insert"):
                 s1 = hashlib.sha1()
