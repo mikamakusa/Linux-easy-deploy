@@ -439,7 +439,7 @@ function Tools {
                             }
                             # Launch connexion to VM "boot2docker"
                             $credentials = New-Object System.Management.Automation.PSCredential($username,$password)
-                            New-SSHSession -ComputerName $IP -Credentials docker -Port $Port -KeyFile "C:\Users\Michael\.docker\machine\machines\default\id_rsa"
+                            New-SSHSession -ComputerName $IP -Credentials docker -Port $Port -KeyFile "C:\Users\$env:USERNAME\.docker\machine\machines\default\id_rsa"
                         }
                         "Linux" {
                             
