@@ -1,12 +1,8 @@
 # Version 1
 function Package {
     Param(
-        [Parameter(Mandatory=$true,position = 0)][string]$IP,
-        [Parameter(Mandatory=$true,Position = 1)][string]$Username,
-        [Parameter(Mandotory=$true,Position = 2)][string]$Password,
-        [Parameter(Mandatory=$true,Position = 3)][string]$Port,
-        [Parameter(Mandatory=$true,Position = 4)][ValidateSet("Install","Remove","Upgrade")]$Action,
-        [Parameter(Mandatory=$false,Position = 5)][string]$Package
+        [Parameter(Mandatory=$true,Position = 0)][ValidateSet("Install","Remove","Upgrade")]$Action,
+        [Parameter(Mandatory=$true,Position = 1)][string]$Package
     )
 
     ## Import SSH Module
@@ -54,6 +50,17 @@ function Package {
                         "xbps-install" {return "xbps-install -u -y"}
                     }
                 }
+                "Search" {
+                    switch ($i) {
+                        "apt-get" {return "$i search"}
+                        "yum" {return "$i list -y"}
+                        "zypper" {return "$i search -y"}
+                        "equo" {return "$i match -y"}
+                        "pacman" {return "$i -Ss"}
+                        "emerge" {return "$i --search"}
+                        "xbps-install" {return "xbps-query -Rs"}
+                    }
+                }
                 default {}
             }
         }
@@ -81,6 +88,13 @@ function Package {
                         "cast" {return "$i -y"}
                     }
                 }
+                "Search" {
+                    switch ($i) { 
+                        "slackpkg" {return "$i search"}
+                        "urpmi" {return "urpmq"}
+                        "cast" {return "gaze search -name"}
+                    }
+                }
                 default {}
             }
         }
@@ -105,6 +119,12 @@ function Package {
                         "nix" {return "nix-env -u -y"}
                     }
                 }
+                "Search" {
+                    switch ($i) {
+                        "apk" {return "apk search"}
+                        "nix" {return "nix-env -qa"}
+                    }
+                }
                 default {}
             }
         }
@@ -115,13 +135,16 @@ function Package {
 }
 function PacMan ($file) {
     $IP = ((import-Csv $file -Delimiter ";").IP)
-            $Username = ((import-Csv $file -Delimiter ";").Username)
-            $Password = ((import-Csv $file -Delimiter ";").Password)
-            $Port = ((import-Csv $file -Delimiter ";").Port)
-            $Action = ((import-Csv $file -Delimiter ";").Action)
-            $Package = ((import-Csv $file -Delimiter ";").Package)
-            $credentials = New-Object System.Management.Automation.PSCredential($username,$password)
-            foreach ($i in ((import-Csv $file -Delimiter ";").IP)) {
-                New-SSHSession -ComputerName $IP -Credentials $credentials -Port $Port
-                Package -IP $i -Username $Username -Password $Password -Port $Port -Action $Action -Package $Package
+    $Username = ((import-Csv $file -Delimiter ";").Username)
+    $Password = ((import-Csv $file -Delimiter ";").Password)
+    $Port = ((import-Csv $file -Delimiter ";").Port)
+    $Action = ((import-Csv $file -Delimiter ";").Action)
+    $Package = ((import-Csv $file -Delimiter ";").Package)
+    $credentials = New-Object System.Management.Automation.PSCredential($username,$password)
+    foreach ($i in ((import-Csv $file -Delimiter ";").IP)) {
+        New-SSHSession -ComputerName $i -Credentials $credentials -Port $Port
+        if ((Package -Action "Search" -Package $Package).ExitStatus -notmatch "127") {
+            Package -Action $Action -Package $Package
+        }
+    }
 }
